@@ -1,0 +1,21 @@
+{
+  "app_name": "AVIGHNA",
+  "app_tagline": "Smart Logistics & Accessibility Intelligence Platform",
+  "nav": {
+    "dashboard": "Dashboard",
+    "live_map": "Live GIS Map",
+    "incidents": "Incident Reporting",
+    "risk_analysis": "Risk Analytics",
+    "vehicles": "Vehicle Tracking",
+    "routes": "Route Planner",
+    "alerts": "Live Warnings",
+    "verification": "Verifier Console",
+    "logistics": "Cargo Priority"
+  },
+  "status": {
+    "accessible": "ACCESSIBLE",
+    "risky": "RISKY",
+    "blocked": "BLOCKED",
+    "pending": "PENDING VERIFICATION"
+  }
+}
