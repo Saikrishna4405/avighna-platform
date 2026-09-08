@@ -34,6 +34,19 @@ export function App() {
     }
   }, []);
 
+  const handleRoleSwitch = (newRole) => {
+    const roleProfiles = {
+      ADMIN: { id: 1, name: 'System Admin', email: 'admin@avighna.gov.in', role: 'ADMIN', district: 'Guwahati' },
+      VERIFIER: { id: 3, name: 'District Verifier', email: 'verifier@avighna.gov.in', role: 'VERIFIER', district: 'East Khasi Hills' },
+      FIELD_OFFICER: { id: 2, name: 'Field Inspector', email: 'field@avighna.gov.in', role: 'FIELD_OFFICER', district: 'Shillong' },
+      LOGISTICS_OPERATOR: { id: 5, name: 'Fleet Dispatcher', email: 'logistics@avighna.gov.in', role: 'LOGISTICS_OPERATOR', district: 'Guwahati' },
+      DISTRICT_PLANNER: { id: 4, name: 'Regional Planner', email: 'planner@avighna.gov.in', role: 'DISTRICT_PLANNER', district: 'Assam' }
+    };
+    const updatedUser = roleProfiles[newRole] || roleProfiles.ADMIN;
+    setCurrentUser(updatedUser);
+    localStorage.setItem('avighna_user', JSON.stringify(updatedUser));
+  };
+
   const handleLogout = () => {
     logoutUser();
     setCurrentUser(null);
@@ -95,6 +108,7 @@ export function App() {
         <Navbar
           title={getPageTitle()}
           currentUser={currentUser}
+          onRoleSwitch={handleRoleSwitch}
           onRunDemoScenario={() => setIsDemoModalOpen(true)}
           isOnline={true}
         />

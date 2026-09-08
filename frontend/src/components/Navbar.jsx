@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Play, Wifi, WifiOff, Globe } from 'lucide-react';
 
-export const Navbar = ({ title, currentUser, onRunDemoScenario, isOnline = true }) => {
+export const Navbar = ({ title, currentUser, onRoleSwitch, onRunDemoScenario, isOnline = true }) => {
   const [lang, setLang] = useState('en');
 
   return (
@@ -40,9 +40,26 @@ export const Navbar = ({ title, currentUser, onRunDemoScenario, isOnline = true 
         </button>
 
         {currentUser && (
-          <div className="user-badge">
-            <span style={{ fontWeight: 600 }}>{currentUser.name}</span>
-            <span className="role-tag">{currentUser.role}</span>
+          <div className="user-badge" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
+              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{currentUser.name}</span>
+              <span style={{ fontSize: '0.7rem', color: '#67e8f9' }}>{currentUser.district}</span>
+            </div>
+            {onRoleSwitch ? (
+              <select
+                value={currentUser.role}
+                onChange={(e) => onRoleSwitch(e.target.value)}
+                style={{ cursor: 'pointer', outline: 'none', background: 'rgba(59, 130, 246, 0.25)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.5)', padding: '4px 8px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem' }}
+              >
+                <option value="ADMIN" style={{ background: '#0f172a', color: '#fff' }}>👑 ADMIN (Full Access)</option>
+                <option value="VERIFIER" style={{ background: '#0f172a', color: '#fff' }}>✅ VERIFIER (Approve Blockages)</option>
+                <option value="FIELD_OFFICER" style={{ background: '#0f172a', color: '#fff' }}>⚠️ FIELD OFFICER (Report Hazards)</option>
+                <option value="LOGISTICS_OPERATOR" style={{ background: '#0f172a', color: '#fff' }}>🚛 LOGISTICS OPS (Fleet & Reroute)</option>
+                <option value="DISTRICT_PLANNER" style={{ background: '#0f172a', color: '#fff' }}>🗺️ PLANNER (Corridors)</option>
+              </select>
+            ) : (
+              <span className="role-tag">{currentUser.role}</span>
+            )}
           </div>
         )}
       </div>

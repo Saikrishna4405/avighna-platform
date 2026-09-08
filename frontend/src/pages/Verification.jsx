@@ -44,12 +44,18 @@ export const Verification = () => {
 
   return (
     <div className="glass-panel">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-        <CheckSquare color="#8b5cf6" size={24} />
-        <div>
-          <h2 style={{ fontSize: '1.2rem', color: '#fff' }}>Field Verification Console</h2>
-          <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Review risk flags, photo evidence, and authorize corridor status changes</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <CheckSquare color="#8b5cf6" size={24} />
+          <div>
+            <h2 style={{ fontSize: '1.2rem', color: '#fff' }}>Admin & Verifier Approval Console</h2>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Review field officer road complaints, photo evidence, and authorize corridor status changes</p>
+          </div>
         </div>
+      </div>
+
+      <div style={{ background: 'rgba(139, 92, 246, 0.12)', borderLeft: '4px solid #8b5cf6', padding: '12px 16px', borderRadius: '10px', marginBottom: '20px', fontSize: '0.83rem', color: '#ddd6fe' }}>
+        <strong>👑 Admin & Verifier Authorization Active:</strong> When you click <strong>VERIFY (Block)</strong>, the road corridor status is updated to <strong>BLOCKED</strong> on the live GIS map and automatic truck rerouting is dispatched.
       </div>
 
       {pendingItems.length === 0 ? (

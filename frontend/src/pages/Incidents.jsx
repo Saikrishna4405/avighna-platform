@@ -74,9 +74,16 @@ export const Incidents = () => {
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '20px' }}>
       {/* Form Panel */}
       <div className="glass-panel">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          <AlertTriangle color="#f43f5e" size={22} />
-          <h2 style={{ fontSize: '1.2rem', color: '#fff' }}>Field Incident Report</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <AlertTriangle color="#ef4444" size={24} />
+          <div>
+            <h2 style={{ fontSize: '1.2rem', color: '#fff' }}>Road Hazard & Incident Reporting</h2>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Field Officer Console — Submitted complaints are analyzed by CV and queued for Admin approval</p>
+          </div>
+        </div>
+
+        <div style={{ background: 'rgba(239, 68, 68, 0.12)', borderLeft: '4px solid #ef4444', padding: '10px 14px', borderRadius: '10px', marginTop: '14px', marginBottom: '20px', fontSize: '0.82rem', color: '#fca5a5' }}>
+          <strong>⚠️ Field Officer Workflow:</strong> Reports submitted here enter the <strong>Pending Verification Queue</strong>. An Admin or Verifier must approve the report to block the corridor.
         </div>
 
         {offlineCount > 0 && (
