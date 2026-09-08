@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Truck, RefreshCw, Navigation, Play } from 'lucide-react';
+import { Truck, RefreshCw, Navigation, Play, Smartphone } from 'lucide-react';
 import { apiFetch } from '../services/api';
+import { DriverAlertModal } from '../components/DriverAlertModal';
 
 export const Vehicles = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
 
   const fetchVehicles = async () => {
     try {
@@ -95,20 +97,37 @@ export const Vehicles = () => {
                   </span>
                 </td>
                 <td>
-                  <button
-                    onClick={() => handleReroute(v.id)}
-                    className="btn-primary"
-                    style={{ padding: '6px 12px', fontSize: '0.75rem', background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', color: '#fbbf24' }}
-                  >
-                    <RefreshCw size={12} />
-                    <span>Reroute</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => handleReroute(v.id)}
+                      className="btn-primary"
+                      style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', color: '#fbbf24' }}
+                    >
+                      <RefreshCw size={12} />
+                      <span>Reroute</span>
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedVehicle(v)}
+                      className="btn-primary"
+                      style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.2)', border: '1px solid rgba(56, 189, 248, 0.4)', color: '#38bdf8' }}
+                    >
+                      <Smartphone size={12} />
+                      <span>Mobile SMS</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <DriverAlertModal
+        isOpen={!!selectedVehicle}
+        onClose={() => setSelectedVehicle(null)}
+        vehicle={selectedVehicle}
+      />
     </div>
   );
 };

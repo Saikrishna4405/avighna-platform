@@ -8,33 +8,36 @@ def get_current_weather(latitude: float, longitude: float) -> Dict[str, Any]:
     Fetch weather information for a specific coordinate in NER.
     Uses WEATHER_API_KEY if available; falls back to realistic DEMO weather simulation.
     """
-    api_key = settings.WEATHER_API_KEY
-    if api_key:
-        try:
-            url = f"https://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={api_key}&units=metric"
-            resp = requests.get(url, timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                rain_mm = data.get("rain", {}).get("1h", 0.0) * 24.0 # estimate 24h
-                temp = data.get("main", {}).get("temp", 24.0)
-                
-                intensity = "LIGHT"
-                if rain_mm > 100: intensity = "EXTREME"
-                elif rain_mm > 50: intensity = "HEAVY"
-                elif rain_mm > 15: intensity = "MODERATE"
+    # Try Open-Meteo Free API (No API key required)
+    try:
+        open_meteo_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current_weather=true&daily=precipitation_sum&timezone=auto"
+        resp = requests.get(open_meteo_url, timeout=4)
+        if resp.status_code == 200:
+            data = resp.json()
+            curr = data.get("current_weather", {})
+            daily = data.get("daily", {})
+            
+            temp = curr.get("temperature", 24.0)
+            precip_list = daily.get("precipitation_sum", [35.0])
+            rain_mm = float(precip_list[0]) if precip_list else 35.0
 
-                return {
-                    "latitude": latitude,
-                    "longitude": longitude,
-                    "location_name": data.get("name", "NER Region"),
-                    "rainfall_mm": round(rain_mm, 1),
-                    "rainfall_intensity": intensity,
-                    "temperature": round(temp, 1),
-                    "forecast_risk": "HIGH" if intensity in ["HEAVY", "EXTREME"] else "LOW",
-                    "source": "REAL_EXTERNAL_API"
-                }
-        except Exception as e:
-            print(f"Weather API request failed: {e}. Falling back to NER DEMO engine.")
+            intensity = "LIGHT"
+            if rain_mm > 80: intensity = "EXTREME"
+            elif rain_mm > 40: intensity = "HEAVY"
+            elif rain_mm > 15: intensity = "MODERATE"
+
+            return {
+                "latitude": latitude,
+                "longitude": longitude,
+                "location_name": f"NER District ({latitude:.2f}°N, {longitude:.2f}°E)",
+                "rainfall_mm": round(rain_mm, 1),
+                "rainfall_intensity": intensity,
+                "temperature": round(temp, 1),
+                "forecast_risk": "HIGH" if intensity in ["HEAVY", "EXTREME"] else "LOW",
+                "source": "LIVE_OPEN_METEO_API"
+            }
+    except Exception as e:
+        print(f"Open-Meteo API query notice: {e}. Falling back to NER weather generator.")
 
     # DEMO Fallback generator based on NER coordinate zones
     return generate_demo_weather(latitude, longitude)

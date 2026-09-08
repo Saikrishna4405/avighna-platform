@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.incident import Incident
@@ -55,7 +55,6 @@ def get_incident_by_id(incident_id: int, db: Session = Depends(get_db)):
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
     return incident
-
 @router.post("/analyze-image", response_model=ImageAnalysisResponse)
 def analyze_incident_image(req: ImageAnalysisRequest):
     """
@@ -63,3 +62,16 @@ def analyze_incident_image(req: ImageAnalysisRequest):
     """
     analysis = analyze_field_image(req.image_url)
     return ImageAnalysisResponse(**analysis)
+
+@router.post("/upload-photo")
+async def upload_and_analyze_field_photo(file: UploadFile = File(...)):
+    """
+    Upload a field photograph file (JPG/PNG) and analyze using OpenCV Computer Vision feature extraction.
+    """
+    contents = await file.read()
+    analysis = analyze_field_image(contents)
+    return {
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "analysis": analysis
+    }
