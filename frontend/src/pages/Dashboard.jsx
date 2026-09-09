@@ -55,15 +55,18 @@ export const Dashboard = ({ onLocationChange }) => {
     if (!districtName || districtName === 'all') {
       setActiveDistrict(null);
       fetchDashboardData(null);
+      if (onLocationChange) onLocationChange(null);
     } else {
       setActiveDistrict(districtName);
       fetchDashboardData(districtName);
+      if (onLocationChange) onLocationChange(districtName);
     }
   };
 
   const handleMapLocationChange = (placeName, lat, lon) => {
     setActiveDistrict(placeName);
     fetchDashboardData(placeName);
+    if (onLocationChange) onLocationChange(placeName);
   };
 
   // Compute sector-specific filtered metrics or global regional totals

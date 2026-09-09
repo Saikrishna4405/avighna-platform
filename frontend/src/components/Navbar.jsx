@@ -90,7 +90,7 @@ export const Navbar = ({ title, currentUser, activeSector, onRoleSwitch, onRunDe
             <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
               <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#f8fafc' }}>{currentUser.name}</span>
               <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600 }}>
-                {activeSector ? `📍 ${activeSector}` : `🌐 ${currentUser.district || 'All Regional NER'}`}
+                {activeSector ? `📍 Sector: ${activeSector}` : `🌐 Sector: ${currentUser.district || 'All Regional NER'}`}
               </span>
             </div>
             <select
