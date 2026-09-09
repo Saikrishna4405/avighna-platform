@@ -170,7 +170,7 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
             # Broadcast alert to live warning stream
             cursor.execute(
-                "INSERT INTO alerts (alert_type, severity, message, created_at) VALUES (?, ?, ?, datetime('now'))",
+                "INSERT INTO alerts (alert_type, severity, message, status, created_at) VALUES (?, ?, ?, 'ACTIVE', datetime('now'))",
                 (f"{itype}_REPORTED", sev, f"{itype} reported in {dist}: {desc}")
             )
 
@@ -258,7 +258,7 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif path == '/api/demo/run-scenario':
             cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 92.0 WHERE id = 1")
             cursor.execute("UPDATE vehicles SET status = 'REROUTED', eta = '3h 15m', current_route = ? WHERE id = 1", (json.dumps([[26.14, 91.73], [26.05, 91.50], [25.57, 91.88]]),))
-            cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('EMERGENCY_SIMULATION', 'CRITICAL', 'Simulated 95mm Monsoon Rain in Shillong Sector. NH-40 Corridor BLOCKED.', datetime('now'))")
+            cursor.execute("INSERT INTO alerts (alert_type, severity, message, status, created_at) VALUES ('EMERGENCY_SIMULATION', 'CRITICAL', 'Simulated 95mm Monsoon Rain in Shillong Sector. NH-40 Corridor BLOCKED.', 'ACTIVE', datetime('now'))")
             conn.commit()
             self._json_response({
                 "status": "SUCCESS",
@@ -297,10 +297,10 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 95.0 WHERE id = ? OR district LIKE ?", (road_id, f"%{inc_dist}%"))
                     cursor.execute("UPDATE vehicles SET status = 'REROUTED', eta = 'REROUTED DETOUR' WHERE assigned_road_ids LIKE ? OR destination LIKE ? OR origin LIKE ?", (f"%{road_id}%", f"%{inc_dist}%", f"%{inc_dist}%"))
                     cursor.execute("UPDATE vehicles SET status = 'REROUTED' WHERE id = 1")
-                    cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('ROAD_BLOCKED', 'CRITICAL', ?, datetime('now'))", (f"Incident #{inc_id} ({inc_type}) VERIFIED by inspector -> Sector {inc_dist} corridor set to BLOCKED. Auto-rerouting dispatched.",))
+                    cursor.execute("INSERT INTO alerts (alert_type, severity, message, status, created_at) VALUES ('ROAD_BLOCKED', 'CRITICAL', ?, 'ACTIVE', datetime('now'))", (f"Incident #{inc_id} ({inc_type}) VERIFIED by inspector -> Sector {inc_dist} corridor set to BLOCKED. Auto-rerouting dispatched.",))
                 elif dec == 'REJECTED':
                     cursor.execute("UPDATE roads SET accessibility_status = 'ACCESSIBLE', current_risk_score = 25.0 WHERE id = ? OR district LIKE ?", (road_id, f"%{inc_dist}%"))
-                    cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('INCIDENT_REJECTED', 'INFO', ?, datetime('now'))", (f"Incident #{inc_id} REJECTED by inspector -> Sector {inc_dist} corridor restored to ACCESSIBLE.",))
+                    cursor.execute("INSERT INTO alerts (alert_type, severity, message, status, created_at) VALUES ('INCIDENT_REJECTED', 'INFO', ?, 'ACTIVE', datetime('now'))", (f"Incident #{inc_id} REJECTED by inspector -> Sector {inc_dist} corridor restored to ACCESSIBLE.",))
 
                 conn.commit()
                 self._json_response({"id": inc_id, "incident_id": inc_id, "decision": dec, "remarks": remarks})
