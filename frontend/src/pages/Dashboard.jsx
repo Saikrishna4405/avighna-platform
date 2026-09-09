@@ -172,7 +172,7 @@ export const Dashboard = ({ onLocationChange }) => {
               {activeDistrict ? `📍 Sector: ${activeDistrict}` : "North Eastern Region (NER) Vector Layers"}
             </span>
           </div>
-          <MapView roadsGeoJSON={roadsGeoJSON} incidents={incidents} vehicles={vehicles} onLocationChange={handleMapLocationChange} />
+          <MapView activeDistrict={activeDistrict} roadsGeoJSON={roadsGeoJSON} incidents={incidents} vehicles={vehicles} onLocationChange={handleMapLocationChange} />
         </div>
 
         {/* Side Panel: Live Warning Stream */}

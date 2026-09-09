@@ -43,7 +43,23 @@ function MapRecenter({ center }) {
   return null;
 }
 
-export const MapView = ({ roadsGeoJSON, incidents = [], vehicles = [], userLocation = null, mapCenter = null, onLocationChange }) => {
+const cityCoordsMap = {
+  'Guwahati': [26.1445, 91.7362],
+  'Shillong': [25.5788, 91.8933],
+  'East Khasi Hills': [25.5788, 91.8933],
+  'Silchar': [24.8333, 92.7789],
+  'Cachar': [24.8333, 92.7789],
+  'Kohima': [25.6747, 94.1100],
+  'Dimapur': [25.9060, 93.7270],
+  'Itanagar': [27.0844, 93.6053],
+  'Papum Pare': [27.0844, 93.6053],
+  'Imphal': [24.8170, 93.9368],
+  'Aizawl': [23.7307, 92.7173],
+  'Gangtok': [27.3389, 88.6065],
+  'East Sikkim': [27.3389, 88.6065]
+};
+
+export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles = [], userLocation = null, mapCenter = null, onLocationChange }) => {
   const defaultCenter = [25.90, 91.88];
   const defaultZoom = 8;
 
@@ -53,6 +69,25 @@ export const MapView = ({ roadsGeoJSON, incidents = [], vehicles = [], userLocat
   const [activeCenter, setActiveCenter] = useState(null);
   const [locatingDevice, setLocatingDevice] = useState(false);
   const [deviceLoc, setDeviceLoc] = useState(userLocation);
+
+  useEffect(() => {
+    if (activeDistrict && activeDistrict !== 'all') {
+      const matchKey = Object.keys(cityCoordsMap).find(k => activeDistrict.toLowerCase().includes(k.toLowerCase()));
+      if (matchKey && cityCoordsMap[matchKey]) {
+        setActiveCenter(cityCoordsMap[matchKey]);
+      } else {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(activeDistrict + ', India')}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data && data.length > 0) {
+              setActiveCenter([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+            }
+          }).catch(() => {});
+      }
+    } else if (activeDistrict === 'all' || activeDistrict === null) {
+      setActiveCenter(defaultCenter);
+    }
+  }, [activeDistrict]);
 
   useEffect(() => {
     if (mapCenter) setActiveCenter(mapCenter);
@@ -389,6 +424,32 @@ export const MapView = ({ roadsGeoJSON, incidents = [], vehicles = [], userLocat
               </div>
             </Popup>
           </Marker>
+        )}
+        {/* Render Active Sector Focus Outer Boundary Circle (15 km Sector Coverage) */}
+        {activeDistrict && activeCenter && (
+          <Circle
+            center={activeCenter}
+            radius={15000}
+            pathOptions={{
+              color: '#38bdf8',
+              fillColor: '#0284c7',
+              fillOpacity: 0.14,
+              weight: 3,
+              dashArray: '8, 8'
+            }}
+          >
+            <Popup>
+              <div style={{ color: '#0f172a', padding: '4px' }}>
+                <h4 style={{ margin: 0, color: '#0284c7' }}>📍 15.0 km Sector Coverage Outer Boundary</h4>
+                <p style={{ margin: '4px 0', fontSize: '0.8rem' }}>
+                  Active Sector: <strong>{activeDistrict}</strong>
+                </p>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#0369a1' }}>
+                  Outer boundary enclosing all local GIS road corridors, hazard sensors, and fleet vehicles.
+                </p>
+              </div>
+            </Popup>
+          </Circle>
         )}
       </MapContainer>
     </div>
