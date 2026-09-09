@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Play, Wifi, WifiOff, Globe } from 'lucide-react';
 
-export const Navbar = ({ title, currentUser, onRoleSwitch, onRunDemoScenario, isOnline = true }) => {
+export const Navbar = ({ title, currentUser, activeSector, onRoleSwitch, onRunDemoScenario, isOnline = true }) => {
   const [lang, setLang] = useState('en');
 
   const changeLanguage = (langCode) => {
@@ -89,7 +89,9 @@ export const Navbar = ({ title, currentUser, onRoleSwitch, onRunDemoScenario, is
           <div className="user-badge" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
               <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#f8fafc' }}>{currentUser.name}</span>
-              <span style={{ fontSize: '0.7rem', color: '#38bdf8' }}>Assigned HQ: {currentUser.district}</span>
+              <span style={{ fontSize: '0.72rem', color: '#38bdf8', fontWeight: 600 }}>
+                {activeSector ? `📍 ${activeSector}` : `🌐 ${currentUser.district || 'All Regional NER'}`}
+              </span>
             </div>
             <select
               value={currentUser.role}

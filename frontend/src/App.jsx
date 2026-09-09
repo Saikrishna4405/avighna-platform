@@ -23,6 +23,8 @@ export function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
+  const [activeSector, setActiveSector] = useState(null);
+
   useEffect(() => {
     const u = getCurrentUser();
     if (u) {
@@ -52,11 +54,7 @@ export function App() {
   };
 
   const handleLocationChange = (placeName) => {
-    if (currentUser) {
-      const updatedUser = { ...currentUser, district: `📍 ${placeName}` };
-      setCurrentUser(updatedUser);
-      localStorage.setItem('avighna_user', JSON.stringify(updatedUser));
-    }
+    setActiveSector(placeName);
   };
 
   if (!currentUser) {
@@ -115,6 +113,7 @@ export function App() {
         <Navbar
           title={getPageTitle()}
           currentUser={currentUser}
+          activeSector={activeSector}
           onRoleSwitch={handleRoleSwitch}
           onRunDemoScenario={() => setIsDemoModalOpen(true)}
           isOnline={true}

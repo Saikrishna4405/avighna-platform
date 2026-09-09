@@ -375,35 +375,16 @@ export const Login = ({ onLoginSuccess }) => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div className="form-group">
-                <label className="form-label">System Role</label>
-                <select className="form-select" value={regRole} onChange={(e) => setRegRole(e.target.value)}>
-                  <option value="PUBLIC_CITIZEN">👤 Public Citizen / Traveler</option>
-                  <option value="FIELD_OFFICER">⚠️ Field Officer / Reporter</option>
-                  <option value="VERIFIER">✅ District Verifier</option>
-                  <option value="LOGISTICS_OPERATOR">🚛 Logistics Operator</option>
-                  <option value="DISTRICT_PLANNER">🗺️ District Planner</option>
-                  <option value="ADMIN">👑 System Admin</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">District / Sector</label>
-                <select className="form-select" value={regDistrict} onChange={(e) => setRegDistrict(e.target.value)}>
-                  <option value="Guwahati (Assam)">Guwahati (Assam)</option>
-                  <option value="Shillong (Meghalaya)">Shillong (Meghalaya)</option>
-                  <option value="East Khasi Hills (Meghalaya)">East Khasi Hills (Meghalaya)</option>
-                  <option value="Silchar (Assam)">Silchar (Assam)</option>
-                  <option value="Kohima (Nagaland)">Kohima (Nagaland)</option>
-                  <option value="Dimapur (Nagaland)">Dimapur (Nagaland)</option>
-                  <option value="Itanagar (Arunachal)">Itanagar (Arunachal)</option>
-                  <option value="Imphal (Manipur)">Imphal (Manipur)</option>
-                  <option value="Aizawl (Mizoram)">Aizawl (Mizoram)</option>
-                  <option value="Agartala (Tripura)">Agartala (Tripura)</option>
-                  <option value="Gangtok (Sikkim)">Gangtok (Sikkim)</option>
-                </select>
-              </div>
+            <div className="form-group">
+              <label className="form-label">System Role</label>
+              <select className="form-select" value={regRole} onChange={(e) => setRegRole(e.target.value)}>
+                <option value="PUBLIC_CITIZEN">👤 Public Citizen / Traveler</option>
+                <option value="FIELD_OFFICER">⚠️ Field Officer / Reporter</option>
+                <option value="VERIFIER">✅ District Verifier</option>
+                <option value="LOGISTICS_OPERATOR">🚛 Logistics Operator</option>
+                <option value="DISTRICT_PLANNER">🗺️ District Planner</option>
+                <option value="ADMIN">👑 System Admin</option>
+              </select>
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '11px', marginTop: '8px', background: '#059669' }}>

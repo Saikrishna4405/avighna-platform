@@ -233,7 +233,39 @@ export const Routes = () => {
     }
   };
 
-  const roundTo = (num, decimals) => Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
+  const [locatingOriginGPS, setLocatingOriginGPS] = useState(false);
+
+  const handleDetectOriginGPS = () => {
+    setLocatingOriginGPS(true);
+    setValidationError('');
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          setOriginCoords({ lat, lon });
+          setLocatingOriginGPS(false);
+
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const data = await res.json();
+            const shortName = data.display_name ? data.display_name.split(',')[0] : 'My Live Location';
+            setOriginName(shortName);
+          } catch (e) {
+            setOriginName(`Live GPS (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+          }
+        },
+        (err) => {
+          setValidationError(`Location access denied or unavailable: ${err.message}`);
+          setLocatingOriginGPS(false);
+        },
+        { enableHighAccuracy: true }
+      );
+    } else {
+      setValidationError('Geolocation is not supported in this browser.');
+      setLocatingOriginGPS(false);
+    }
+  };
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '24px' }}>
@@ -257,9 +289,21 @@ export const Routes = () => {
 
         <form onSubmit={handleCalculateRoute}>
           
-          {/* ORIGIN INPUT WITH AUTOCOMPLETE */}
+          {/* ORIGIN INPUT WITH AUTOCOMPLETE & LIVE GPS */}
           <div className="form-group" style={{ position: 'relative' }}>
-            <label className="form-label">Origin Location (Start City / Place)</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>Origin Location (Start City / Place)</label>
+              <button
+                type="button"
+                onClick={handleDetectOriginGPS}
+                disabled={locatingOriginGPS}
+                style={{ background: '#059669', border: 'none', color: '#ffffff', padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                title="Detect My Current Live Device Geolocation"
+              >
+                <Navigation size={12} />
+                <span>{locatingOriginGPS ? 'Locating...' : '📍 Use Live GPS'}</span>
+              </button>
+            </div>
             <div style={{ position: 'relative' }}>
               <input
                 type="text"
