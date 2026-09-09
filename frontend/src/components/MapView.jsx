@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Search, Navigation, MapPin, Loader2 } from 'lucide-react';
 
@@ -292,20 +292,53 @@ export const MapView = ({ roadsGeoJSON, incidents = [], vehicles = [], userLocat
           );
         })}
 
-        {/* Render Active Incident Hazard Points */}
-        {incidents.map((inc) => (
-          <Marker key={inc.id} position={[inc.latitude, inc.longitude]} icon={incidentIcon}>
-            <Popup>
-              <div style={{ color: '#0f172a', padding: '4px' }}>
-                <h4 style={{ margin: 0, color: '#dc2626' }}>{inc.incident_type} ({inc.severity})</h4>
-                <p style={{ margin: '4px 0', fontSize: '0.8rem' }}>{inc.description}</p>
-                <p style={{ margin: '4px 0', fontSize: '0.75rem', color: '#475569' }}>
-                  Verification: <strong>{inc.verification_status}</strong>
-                </p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {/* Render Active Incident Hazard Points with Impact Danger Buffer Circles */}
+        {incidents.map((inc) => {
+          const radiusMeters = inc.severity === 'CRITICAL' ? 10000 : inc.severity === 'HIGH' ? 6000 : 3500;
+          const circleColor = inc.severity === 'CRITICAL' ? '#ef4444' : inc.severity === 'HIGH' ? '#f59e0b' : '#3b82f6';
+
+          return (
+            <React.Fragment key={inc.id}>
+              {/* Radial Danger Buffer Circle */}
+              <Circle
+                center={[inc.latitude, inc.longitude]}
+                radius={radiusMeters}
+                pathOptions={{
+                  color: circleColor,
+                  fillColor: circleColor,
+                  fillOpacity: 0.18,
+                  weight: 2,
+                  dashArray: '6, 6'
+                }}
+              >
+                <Popup>
+                  <div style={{ color: '#0f172a', padding: '4px' }}>
+                    <h4 style={{ margin: 0, color: circleColor }}>⚠️ {inc.incident_type} Hazard Buffer Zone</h4>
+                    <p style={{ margin: '4px 0', fontSize: '0.8rem' }}>
+                      Impact Radius: <strong>{(radiusMeters / 1000).toFixed(1)} km Buffer</strong> ({inc.severity} Severity)
+                    </p>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#475569' }}>
+                      Corridors & trucks inside this radius trigger automated rerouting advisories.
+                    </p>
+                  </div>
+                </Popup>
+              </Circle>
+
+              {/* Central Hazard Marker */}
+              <Marker position={[inc.latitude, inc.longitude]} icon={incidentIcon}>
+                <Popup>
+                  <div style={{ color: '#0f172a', padding: '4px' }}>
+                    <h4 style={{ margin: 0, color: '#dc2626' }}>{inc.incident_type} ({inc.severity})</h4>
+                    <p style={{ margin: '4px 0', fontSize: '0.8rem' }}>{inc.description}</p>
+                    <p style={{ margin: '4px 0', fontSize: '0.75rem', color: '#475569' }}>
+                      Verification: <strong>{inc.verification_status}</strong>
+                    </p>
+                  </div>
+                </Popup>
+              </Marker>
+            </React.Fragment>
+          );
+        })}
 
         {/* Render Fleet Vehicles (Live GPS Markers) */}
         {vehicles.map((v) => (
