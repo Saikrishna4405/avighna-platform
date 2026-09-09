@@ -2,6 +2,8 @@ from typing import Dict, List, Any
 import numpy as np
 from app.ml.risk_model import get_risk_model, road_condition_to_num
 
+import pandas as pd
+
 def predict_terrain_risk(
     latitude: float,
     longitude: float,
@@ -16,9 +18,16 @@ def predict_terrain_risk(
     cond_num = road_condition_to_num(road_condition)
     
     if model is not None:
-        features = np.array([[rainfall, slope, elevation, cond_num, historical_incidents, nearby_incidents]])
+        features_df = pd.DataFrame([{
+            'rainfall_mm': rainfall,
+            'slope_angle': slope,
+            'elevation': elevation,
+            'road_condition': cond_num,
+            'historical_incidents': historical_incidents,
+            'nearby_incidents': nearby_incidents
+        }])
         try:
-            score = float(model.predict(features)[0])
+            score = float(model.predict(features_df)[0])
         except Exception:
             score = calculate_heuristic_risk(rainfall, slope, cond_num, historical_incidents, nearby_incidents)
     else:

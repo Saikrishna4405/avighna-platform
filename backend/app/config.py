@@ -1,16 +1,8 @@
 import os
-
-try:
-    from pydantic_settings import BaseSettings
-except ImportError:
-    try:
-        from pydantic import BaseSettings
-    except ImportError:
-        class BaseSettings:
-            pass
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "AVIGHNA - AI-Powered Smart Logistics & Accessibility Intelligence for NER"
+    PROJECT_NAME: str = "AVIGHNA - Smart Logistics & Accessibility Intelligence Platform"
     API_V1_STR: str = "/api"
     SECRET_KEY: str = os.getenv("SECRET_KEY", "avighna_super_secret_jwt_key_ner_logistics_platform")
     ALGORITHM: str = "HS256"
@@ -22,8 +14,6 @@ class Settings(BaseSettings):
     MAP_API_KEY: str = os.getenv("MAP_API_KEY", "")
     DEBUG: bool = True
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 settings = Settings()

@@ -20,6 +20,14 @@ export const getCurrentUser = () => {
   return null;
 };
 
+export const registerUser = async (name, email, password, role = 'FIELD_OFFICER', district = 'Guwahati') => {
+  const user = await apiFetch('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password, role, district })
+  });
+  return await loginUser(email, password);
+};
+
 export const logoutUser = () => {
   localStorage.removeItem('avighna_token');
   localStorage.removeItem('avighna_user');

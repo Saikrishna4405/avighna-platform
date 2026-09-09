@@ -28,14 +28,13 @@ export function App() {
     if (u) {
       setCurrentUser(u);
     } else {
-      // Default to demo admin user for immediate seamless evaluation
-      const demoAdmin = { id: 1, name: 'System Admin', email: 'admin@avighna.gov.in', role: 'ADMIN', district: 'Guwahati' };
-      setCurrentUser(demoAdmin);
+      setCurrentUser(null);
     }
   }, []);
 
   const handleRoleSwitch = (newRole) => {
     const roleProfiles = {
+      PUBLIC_CITIZEN: { id: 6, name: 'Everyday Citizen / Traveler', email: 'citizen@avighna.gov.in', role: 'PUBLIC_CITIZEN', district: 'Guwahati' },
       ADMIN: { id: 1, name: 'System Admin', email: 'admin@avighna.gov.in', role: 'ADMIN', district: 'Guwahati' },
       VERIFIER: { id: 3, name: 'District Verifier', email: 'verifier@avighna.gov.in', role: 'VERIFIER', district: 'East Khasi Hills' },
       FIELD_OFFICER: { id: 2, name: 'Field Inspector', email: 'field@avighna.gov.in', role: 'FIELD_OFFICER', district: 'Shillong' },
@@ -52,6 +51,14 @@ export function App() {
     setCurrentUser(null);
   };
 
+  const handleLocationChange = (placeName) => {
+    if (currentUser) {
+      const updatedUser = { ...currentUser, district: `📍 ${placeName}` };
+      setCurrentUser(updatedUser);
+      localStorage.setItem('avighna_user', JSON.stringify(updatedUser));
+    }
+  };
+
   if (!currentUser) {
     return <Login onLoginSuccess={(u) => setCurrentUser(u)} />;
   }
@@ -59,9 +66,9 @@ export function App() {
   const renderPageContent = () => {
     switch (activePage) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onLocationChange={handleLocationChange} />;
       case 'map':
-        return <LiveMap />;
+        return <LiveMap onLocationChange={handleLocationChange} />;
       case 'incidents':
         return <Incidents />;
       case 'risk':
@@ -77,7 +84,7 @@ export function App() {
       case 'logistics':
         return <LogisticsPriority />;
       default:
-        return <Dashboard />;
+        return <Dashboard onLocationChange={handleLocationChange} />;
     }
   };
 

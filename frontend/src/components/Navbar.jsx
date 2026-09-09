@@ -40,26 +40,33 @@ export const Navbar = ({ title, currentUser, onRoleSwitch, onRunDemoScenario, is
         </button>
 
         {currentUser && (
-          <div className="user-badge" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="user-badge" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
-              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{currentUser.name}</span>
-              <span style={{ fontSize: '0.7rem', color: '#67e8f9' }}>{currentUser.district}</span>
+              <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#f8fafc' }}>{currentUser.name}</span>
+              <span style={{ fontSize: '0.7rem', color: '#38bdf8' }}>{currentUser.district}</span>
             </div>
-            {onRoleSwitch ? (
-              <select
-                value={currentUser.role}
-                onChange={(e) => onRoleSwitch(e.target.value)}
-                style={{ cursor: 'pointer', outline: 'none', background: 'rgba(59, 130, 246, 0.25)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.5)', padding: '4px 8px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem' }}
-              >
-                <option value="ADMIN" style={{ background: '#0f172a', color: '#fff' }}>👑 ADMIN (Full Access)</option>
-                <option value="VERIFIER" style={{ background: '#0f172a', color: '#fff' }}>✅ VERIFIER (Approve Blockages)</option>
-                <option value="FIELD_OFFICER" style={{ background: '#0f172a', color: '#fff' }}>⚠️ FIELD OFFICER (Report Hazards)</option>
-                <option value="LOGISTICS_OPERATOR" style={{ background: '#0f172a', color: '#fff' }}>🚛 LOGISTICS OPS (Fleet & Reroute)</option>
-                <option value="DISTRICT_PLANNER" style={{ background: '#0f172a', color: '#fff' }}>🗺️ PLANNER (Corridors)</option>
-              </select>
-            ) : (
-              <span className="role-tag">{currentUser.role}</span>
-            )}
+            <select
+              value={currentUser.role}
+              onChange={(e) => onRoleSwitch && onRoleSwitch(e.target.value)}
+              style={{
+                background: '#2563eb',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value="ADMIN" style={{ background: '#0f172a' }}>👑 ADMIN</option>
+              <option value="FIELD_OFFICER" style={{ background: '#0f172a' }}>⚠️ FIELD_OFFICER</option>
+              <option value="VERIFIER" style={{ background: '#0f172a' }}>✅ VERIFIER</option>
+              <option value="DISTRICT_PLANNER" style={{ background: '#0f172a' }}>🗺️ DISTRICT_PLANNER</option>
+              <option value="LOGISTICS_OPERATOR" style={{ background: '#0f172a' }}>🚛 LOGISTICS_OPERATOR</option>
+              <option value="PUBLIC_CITIZEN" style={{ background: '#0f172a' }}>👤 PUBLIC_CITIZEN</option>
+            </select>
           </div>
         )}
       </div>

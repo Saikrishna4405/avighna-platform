@@ -54,29 +54,29 @@ export const Verification = () => {
         </div>
       </div>
 
-      <div style={{ background: 'rgba(139, 92, 246, 0.12)', borderLeft: '4px solid #8b5cf6', padding: '12px 16px', borderRadius: '10px', marginBottom: '20px', fontSize: '0.83rem', color: '#ddd6fe' }}>
+      <div style={{ background: 'rgba(16, 185, 129, 0.15)', borderLeft: '4px solid #10b981', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.83rem', color: '#6ee7b7', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
         <strong>👑 Admin & Verifier Authorization Active:</strong> When you click <strong>VERIFY (Block)</strong>, the road corridor status is updated to <strong>BLOCKED</strong> on the live GIS map and automatic truck rerouting is dispatched.
       </div>
 
       {pendingItems.length === 0 ? (
-        <p style={{ color: '#64748b', fontSize: '0.9rem' }}>No pending field verification requests at this time.</p>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No pending field verification requests at this time.</p>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
           {pendingItems.map((item) => (
-            <div key={item.id} style={{ background: 'rgba(15, 23, 42, 0.8)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '18px' }}>
+            <div key={item.id} style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Incident #{item.incident_id}</span>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Incident #{item.incident_id}</span>
                 <RiskBadge level={item.severity} score={item.ai_risk_score} />
               </div>
 
-              <h3 style={{ fontSize: '1.05rem', color: '#fff', marginBottom: '6px' }}>{item.incident_type} Report</h3>
-              <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginBottom: '10px' }}>{item.description}</p>
+              <h3 style={{ fontSize: '1.05rem', color: '#f8fafc', fontWeight: 700, marginBottom: '6px' }}>{item.incident_type} Report</h3>
+              <p style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: '10px', lineHeight: 1.4 }}>{item.description}</p>
               
-              <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '12px' }}>
+              <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '12px' }}>
                 Location: ({item.latitude.toFixed(2)}, {item.longitude.toFixed(2)}) | Logged: {new Date(item.created_at).toLocaleTimeString()}
               </div>
 
-              <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '10px', borderRadius: '8px', marginBottom: '14px', fontSize: '0.8rem', color: '#60a5fa' }}>
+              <div style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '10px', borderRadius: '6px', marginBottom: '14px', fontSize: '0.82rem', color: '#93c5fd' }}>
                 <strong>System Recommendation:</strong> {item.ai_recommendation}
               </div>
 

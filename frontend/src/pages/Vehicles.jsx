@@ -21,6 +21,8 @@ export const Vehicles = () => {
 
   useEffect(() => {
     fetchVehicles();
+    const interval = setInterval(fetchVehicles, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleReroute = async (vehicleId) => {

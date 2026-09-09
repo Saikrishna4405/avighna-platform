@@ -48,11 +48,25 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 "docs": "Standalone HTTP API Server"
             })
         elif path == '/api/dashboard/summary':
-            c1 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status != 'REJECTED'").fetchone()[0]
-            c2 = cursor.execute("SELECT COUNT(*) FROM roads WHERE current_risk_score >= 50.0").fetchone()[0]
-            c3 = cursor.execute("SELECT COUNT(*) FROM roads WHERE accessibility_status = 'BLOCKED'").fetchone()[0]
-            c4 = cursor.execute("SELECT COUNT(*) FROM vehicles WHERE status = 'REROUTED'").fetchone()[0]
-            c5 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status = 'PENDING'").fetchone()[0]
+            import urllib.parse
+            query_str = self.path.split('?')[1] if '?' in self.path else ''
+            params = dict(urllib.parse.parse_qsl(query_str))
+            dist = params.get('district', '').strip()
+
+            if dist and dist.lower() not in ['all', 'guwahati metro', 'ner logistics hub', 'guwahati central']:
+                # Filter metrics for specific searched/detected district
+                c1 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status != 'REJECTED' AND (district LIKE ? OR description LIKE ?)", (f"%{dist}%", f"%{dist}%")).fetchone()[0]
+                c2 = cursor.execute("SELECT COUNT(*) FROM roads WHERE current_risk_score >= 50.0 AND (district LIKE ? OR road_name LIKE ?)", (f"%{dist}%", f"%{dist}%")).fetchone()[0]
+                c3 = cursor.execute("SELECT COUNT(*) FROM roads WHERE accessibility_status = 'BLOCKED' AND (district LIKE ? OR road_name LIKE ?)", (f"%{dist}%", f"%{dist}%")).fetchone()[0]
+                c4 = cursor.execute("SELECT COUNT(*) FROM vehicles WHERE status = 'REROUTED'").fetchone()[0]
+                c5 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status = 'PENDING' AND (district LIKE ? OR description LIKE ?)", (f"%{dist}%", f"%{dist}%")).fetchone()[0]
+            else:
+                c1 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status != 'REJECTED'").fetchone()[0]
+                c2 = cursor.execute("SELECT COUNT(*) FROM roads WHERE current_risk_score >= 50.0").fetchone()[0]
+                c3 = cursor.execute("SELECT COUNT(*) FROM roads WHERE accessibility_status = 'BLOCKED'").fetchone()[0]
+                c4 = cursor.execute("SELECT COUNT(*) FROM vehicles WHERE status = 'REROUTED'").fetchone()[0]
+                c5 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status = 'PENDING'").fetchone()[0]
+
             self._json_response({
                 "active_incidents": c1,
                 "high_risk_corridors": c2,
@@ -120,10 +134,16 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         cursor = conn.cursor()
 
         if path == '/api/auth/login':
+            email = data.get("email", "admin@avighna.gov.in")
+            user_row = cursor.execute("SELECT id, name, email, role, district FROM users WHERE email = ?", (email,)).fetchone()
+            if user_row:
+                user_dict = dict(user_row)
+            else:
+                user_dict = {"id": 1, "name": "Field Officer Rahul Sharma", "email": email, "role": "FIELD_OFFICER", "district": "East Khasi Hills (Shillong)"}
             self._json_response({
                 "access_token": "demo_jwt_token_12345",
                 "token_type": "bearer",
-                "user": {"id": 1, "name": "System Admin", "email": data.get("email", "admin@avighna.gov.in"), "role": "ADMIN", "district": "Guwahati"}
+                "user": user_dict
             })
         elif path == '/api/risk/predict':
             res = predict_terrain_risk(
@@ -145,21 +165,80 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             new_id = cursor.lastrowid
             self._json_response({"id": new_id, "status": "LOGGED", "risk_score": 72.0, "ai_recommendation": "Alert authorities; field verification requested."})
         elif path == '/api/routes/recommend':
+            orig = data.get('origin_name', 'Guwahati').strip()
+            dest = data.get('destination_name', 'Shillong').strip()
+            vtype = data.get('vehicle_type', 'REGULAR_CARGO')
+            prio = data.get('priority', 'HIGH')
+
+            speed_map = {'MEDICAL': 65, 'ESSENTIAL_SUPPLY': 60, 'FOOD_SUPPLY': 50, 'REGULAR_CARGO': 45, 'HEAVY_TRUCK': 38}
+            speed = speed_map.get(vtype, 50)
+            if prio == 'CRITICAL': speed += 10
+
+            dest_lower = dest.lower()
+            orig_lower = orig.lower()
+
+            if 'silchar' in dest_lower or 'silchar' in orig_lower:
+                r_name = f"NH-06 {orig}-{dest} Mountain Corridor"
+                dist_km = 210.0
+                risk = 26.0
+                alt_name = f"NH-37 {orig}-{dest} East Hills Bypass"
+                alt_dist = 245.0
+            elif 'kohima' in dest_lower or 'dimapur' in orig_lower:
+                r_name = f"NH-29 {orig}-{dest} Mountain Pass"
+                dist_km = 74.0
+                risk = 58.0 if vtype == 'HEAVY_TRUCK' else 32.0
+                alt_name = f"Phek Sector Detour ({orig}-{dest})"
+                alt_dist = 95.0
+            elif 'itanagar' in dest_lower or 'tezpur' in orig_lower:
+                r_name = f"NH-415 {orig}-{dest} Capital Corridor"
+                dist_km = 155.0
+                risk = 11.0
+                alt_name = f"Brahmaputra Expressway Link ({orig}-{dest})"
+                alt_dist = 172.0
+            else:
+                r_name = f"NH-40 {orig}-{dest} Corridor"
+                dist_km = 98.5
+                risk = 18.5
+                alt_name = f"NH-27 {orig}-{dest} Southern Alternate Detour"
+                alt_dist = 118.0
+
+            hrs = dist_km / speed
+            mins = int((hrs % 1) * 60)
+            eta_str = f"{int(hrs)}h {mins}m"
+
+            alt_hrs = alt_dist / (speed * 0.85)
+            alt_mins = int((alt_hrs % 1) * 60)
+            alt_eta_str = f"{int(alt_hrs)}h {alt_mins}m"
+
+            safety = round(100.0 - risk, 1)
+            alt_safety = round(100.0 - (risk * 0.65), 1)
+
             self._json_response({
                 "recommended_route": {
-                    "route_id": "r1", "route_name": "NH-40 Guwahati-Shillong Corridor", "distance_km": 98.5,
-                    "eta": "2h 45m", "risk_score": 18.5, "safety_score": 81.5, "status": "RECOMMENDED",
-                    "geometry": [[26.14, 91.73], [25.90, 91.80], [25.57, 91.88]]
+                    "route_id": f"r_{vtype}_{prio}",
+                    "route_name": r_name,
+                    "distance_km": dist_km,
+                    "eta": eta_str,
+                    "risk_score": risk,
+                    "safety_score": safety,
+                    "status": "RECOMMENDED"
                 },
                 "alternative_routes": [
                   {
-                    "route_id": "r2", "route_name": "NH-27 Southern Alternate Detour", "distance_km": 118.0,
-                    "eta": "3h 15m", "risk_score": 12.0, "safety_score": 88.0, "status": "ALTERNATIVE",
-                    "geometry": [[26.14, 91.73], [26.05, 91.50], [25.57, 91.88]]
+                    "route_id": f"r_alt_{vtype}",
+                    "route_name": alt_name,
+                    "distance_km": alt_dist,
+                    "eta": alt_eta_str,
+                    "risk_score": round(risk * 0.65, 1),
+                    "safety_score": alt_safety,
+                    "status": "ALTERNATIVE"
                   }
                 ],
-                "distance_km": 98.5, "eta": "2h 45m", "risk_score": 18.5, "safety_score": 81.5,
-                "reason_for_selection": "Selected route balances distance with high safety score avoiding active landslide zones."
+                "distance_km": dist_km,
+                "eta": eta_str,
+                "risk_score": risk,
+                "safety_score": safety,
+                "reason_for_selection": f"Dynamic route optimization for {vtype} ({prio} Priority) traveling at {speed} km/h via {r_name}. Priority clearance applied."
             })
         elif path == '/api/demo/run-scenario':
             cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 92.0 WHERE id = 1")
