@@ -3,7 +3,7 @@ import { MapView } from '../components/MapView';
 import { apiFetch } from '../services/api';
 import { Navigation, Play, RefreshCw, Radio } from 'lucide-react';
 
-export const LiveMap = () => {
+export const LiveMap = ({ onLocationChange }) => {
   const [roadsGeoJSON, setRoadsGeoJSON] = useState(null);
   const [incidents, setIncidents] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -51,10 +51,21 @@ export const LiveMap = () => {
     setIsLocating(true);
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation([latitude, longitude]);
           setIsLocating(false);
+
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+            const data = await res.json();
+            const addr = data.address || {};
+            const cleanCity = addr.city || addr.town || addr.county || addr.state_district || addr.suburb || addr.state || (data.display_name ? data.display_name.split(',')[0] : 'Hyderabad');
+            if (onLocationChange) onLocationChange(cleanCity, latitude, longitude);
+          } catch (e) {
+            console.error('GPS reverse geocoding failed:', e);
+            if (onLocationChange) onLocationChange('Hyderabad', latitude, longitude);
+          }
         },
         (error) => {
           alert(`Geolocation error: ${error.message}. Please allow location access in your browser.`);
@@ -125,7 +136,7 @@ export const LiveMap = () => {
         <span style={{ color: '#10b981', fontWeight: 600 }}>📍 YOUR DEVICE GPS</span>
       </div>
 
-      <MapView roadsGeoJSON={roadsGeoJSON} incidents={incidents} vehicles={vehicles} userLocation={userLocation} />
+      <MapView roadsGeoJSON={roadsGeoJSON} incidents={incidents} vehicles={vehicles} userLocation={userLocation} onLocationChange={onLocationChange} />
     </div>
   );
 };

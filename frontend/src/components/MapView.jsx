@@ -140,14 +140,26 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
     setLocatingDevice(true);
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        async (pos) => {
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
           const loc = [lat, lon];
-          // Pin user location on Leaflet map without forcing global sector filter
+          // Pin user location on Leaflet map and update active sector across app
           setDeviceLoc(loc);
           setActiveCenter(loc);
           setLocatingDevice(false);
+
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const data = await res.json();
+            const addr = data.address || {};
+            const cleanCity = addr.city || addr.town || addr.county || addr.state_district || addr.suburb || addr.state || (data.display_name ? data.display_name.split(',')[0] : 'Hyderabad');
+            setSearchQuery(cleanCity);
+            if (onLocationChange) onLocationChange(cleanCity, lat, lon);
+          } catch (e) {
+            console.error('GPS reverse geocode failed:', e);
+            if (onLocationChange) onLocationChange('Hyderabad', lat, lon);
+          }
         },
         (err) => {
           alert(`Location access denied or unavailable: ${err.message}`);
