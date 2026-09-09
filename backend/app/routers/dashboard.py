@@ -1,7 +1,7 @@
-from typing import Dict, Any, List
-from fastapi import APIRouter, Depends
+from typing import Dict, Any, List, Optional
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app.database import get_db
 from app.models.incident import Incident
 from app.models.road import Road
@@ -12,7 +12,7 @@ from app.models.verification import Verification
 router = APIRouter(prefix="/dashboard", tags=["Operational Dashboard Metrics"])
 
 @router.get("/summary")
-def get_dashboard_summary(db: Session = Depends(get_db)):
+def get_dashboard_summary(district: Optional[str] = Query(None), db: Session = Depends(get_db)):
     """
     Returns aggregated KPI statistics for top cards on operational dashboard:
     - Active Incidents
@@ -21,11 +21,37 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     - Vehicles Rerouted
     - Pending Verifications
     """
-    active_incidents = db.query(Incident).filter(Incident.verification_status != "REJECTED").count()
-    high_risk_corridors = db.query(Road).filter(Road.current_risk_score >= 50.0).count()
-    blocked_roads = db.query(Road).filter(Road.accessibility_status == "BLOCKED").count()
-    vehicles_rerouted = db.query(Vehicle).filter(Vehicle.status == "REROUTED").count()
-    pending_verifications = db.query(Incident).filter(Incident.verification_status == "PENDING").count()
+    if district and district.strip().lower() not in ['all', 'all regional ner totals', 'global', 'none', '']:
+        dist = district.strip()
+        active_incidents = db.query(Incident).filter(
+            Incident.verification_status != "REJECTED",
+            or_(Incident.district.ilike(f"%{dist}%"), Incident.description.ilike(f"%{dist}%"))
+        ).count()
+
+        high_risk_corridors = db.query(Road).filter(
+            or_(Road.current_risk_score >= 50.0, Road.accessibility_status == "BLOCKED", Road.accessibility_status == "RISKY"),
+            or_(Road.district.ilike(f"%{dist}%"), Road.road_name.ilike(f"%{dist}%"))
+        ).count()
+
+        blocked_roads = db.query(Road).filter(
+            Road.accessibility_status == "BLOCKED",
+            or_(Road.district.ilike(f"%{dist}%"), Road.road_name.ilike(f"%{dist}%"))
+        ).count()
+
+        vehicles_rerouted = db.query(Vehicle).filter(
+            Vehicle.status == "REROUTED"
+        ).count()
+
+        pending_verifications = db.query(Incident).filter(
+            Incident.verification_status == "PENDING",
+            or_(Incident.district.ilike(f"%{dist}%"), Incident.description.ilike(f"%{dist}%"))
+        ).count()
+    else:
+        active_incidents = db.query(Incident).filter(Incident.verification_status != "REJECTED").count()
+        high_risk_corridors = db.query(Road).filter(or_(Road.current_risk_score >= 50.0, Road.accessibility_status == "BLOCKED", Road.accessibility_status == "RISKY")).count()
+        blocked_roads = db.query(Road).filter(Road.accessibility_status == "BLOCKED").count()
+        vehicles_rerouted = db.query(Vehicle).filter(Vehicle.status == "REROUTED").count()
+        pending_verifications = db.query(Incident).filter(Incident.verification_status == "PENDING").count()
 
     return {
         "active_incidents": active_incidents,
