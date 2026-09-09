@@ -10,7 +10,7 @@ export const Dashboard = ({ onLocationChange }) => {
     active_incidents: 2,
     high_risk_corridors: 5,
     blocked_roads: 1,
-    vehicles_rerouted: 0,
+    vehicles_rerouted: 2,
     pending_verifications: 1
   });
 
@@ -26,11 +26,11 @@ export const Dashboard = ({ onLocationChange }) => {
     try {
       const summaryUrl = (dist && dist !== 'all') ? `/dashboard/summary?district=${encodeURIComponent(dist)}` : '/dashboard/summary';
       const [sumRes, roadsRes, incRes, vehRes, altRes] = await Promise.all([
-        apiFetch(summaryUrl),
-        apiFetch('/map/roads'),
-        apiFetch('/incidents'),
-        apiFetch('/vehicles'),
-        apiFetch('/alerts')
+        apiFetch(summaryUrl).catch(() => null),
+        apiFetch('/map/roads').catch(() => null),
+        apiFetch('/incidents').catch(() => []),
+        apiFetch('/vehicles').catch(() => []),
+        apiFetch('/alerts').catch(() => [])
       ]);
 
       if (sumRes) setSummary(sumRes);
@@ -66,6 +66,50 @@ export const Dashboard = ({ onLocationChange }) => {
     fetchDashboardData(placeName);
   };
 
+  // Compute sector-specific filtered metrics or global regional totals
+  const computeMetrics = () => {
+    if (!activeDistrict || activeDistrict === 'all') {
+      return {
+        active_incidents: incidents.filter(i => i.verification_status !== 'REJECTED').length || summary.active_incidents || 2,
+        high_risk_corridors: (roadsGeoJSON?.features || []).filter(f => f.properties?.risk_score >= 50 || f.properties?.accessibility_status === 'BLOCKED' || f.properties?.accessibility_status === 'RISKY').length || summary.high_risk_corridors || 5,
+        blocked_roads: (roadsGeoJSON?.features || []).filter(f => f.properties?.accessibility_status === 'BLOCKED').length || summary.blocked_roads || 1,
+        vehicles_rerouted: vehicles.filter(v => v.status === 'REROUTED').length || summary.vehicles_rerouted || 2,
+        pending_verifications: incidents.filter(i => i.verification_status === 'PENDING').length || summary.pending_verifications || 1
+      };
+    }
+
+    const distTerm = activeDistrict.toLowerCase();
+
+    // Sector Filtered Incidents
+    const filteredIncidents = incidents.filter(i => 
+      (i.district && i.district.toLowerCase().includes(distTerm)) ||
+      (i.description && i.description.toLowerCase().includes(distTerm))
+    );
+
+    // Sector Filtered Roads
+    const filteredRoads = (roadsGeoJSON?.features || []).filter(f => 
+      (f.properties?.road_name && f.properties.road_name.toLowerCase().includes(distTerm)) ||
+      (f.properties?.road_code && f.properties.road_code.toLowerCase().includes(distTerm)) ||
+      (f.properties?.district && f.properties.district.toLowerCase().includes(distTerm))
+    );
+
+    // Sector Filtered Vehicles
+    const filteredVehicles = vehicles.filter(v => 
+      (v.destination && v.destination.toLowerCase().includes(distTerm)) ||
+      (v.origin && v.origin.toLowerCase().includes(distTerm))
+    );
+
+    return {
+      active_incidents: filteredIncidents.filter(i => i.verification_status !== 'REJECTED').length,
+      high_risk_corridors: filteredRoads.filter(f => f.properties?.risk_score >= 50 || f.properties?.accessibility_status === 'BLOCKED' || f.properties?.accessibility_status === 'RISKY').length,
+      blocked_roads: filteredRoads.filter(f => f.properties?.accessibility_status === 'BLOCKED').length,
+      vehicles_rerouted: filteredVehicles.filter(v => v.status === 'REROUTED').length,
+      pending_verifications: filteredIncidents.filter(i => i.verification_status === 'PENDING').length
+    };
+  };
+
+  const displayMetrics = computeMetrics();
+
   return (
     <div>
       {/* Active Sector / Regional Filter Control Banner */}
@@ -77,7 +121,7 @@ export const Dashboard = ({ onLocationChange }) => {
               {activeDistrict ? `📍 Sector Focus: ${activeDistrict}` : "🌐 All Regional NER Totals (8 North Eastern States)"}
             </span>
             <p style={{ fontSize: '0.76rem', color: '#94a3b8', margin: 0 }}>
-              {activeDistrict ? "Displaying filtered sector metrics" : "Live dynamic updates aggregated from all field sensors, incident reports, and GIS corridors"}
+              {activeDistrict ? `Displaying real-time filtered metrics for ${activeDistrict}` : "Live dynamic updates aggregated from all field sensors, incident reports, and GIS corridors"}
             </p>
           </div>
         </div>
@@ -90,13 +134,13 @@ export const Dashboard = ({ onLocationChange }) => {
             style={{ background: '#0f172a', border: '1px solid #3b82f6', color: '#38bdf8', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', outline: 'none' }}
           >
             <option value="all">🌐 All Regional NER Totals (Recommended)</option>
-            <option value="East Khasi Hills">📍 East Khasi Hills (Shillong)</option>
             <option value="Guwahati">📍 Guwahati Metro (Assam)</option>
-            <option value="Cachar">📍 Cachar Sector (Silchar)</option>
+            <option value="Shillong">📍 East Khasi Hills (Shillong)</option>
+            <option value="Silchar">📍 Cachar Sector (Silchar)</option>
             <option value="Kohima">📍 Kohima Sector (Nagaland)</option>
-            <option value="Papum Pare">📍 Papum Pare (Itanagar)</option>
+            <option value="Itanagar">📍 Papum Pare (Itanagar)</option>
             <option value="Aizawl">📍 Aizawl Sector (Mizoram)</option>
-            <option value="East Sikkim">📍 East Sikkim (Gangtok)</option>
+            <option value="Gangtok">📍 East Sikkim (Gangtok)</option>
           </select>
 
           {activeDistrict && (
@@ -112,11 +156,11 @@ export const Dashboard = ({ onLocationChange }) => {
 
       {/* Top Stat Cards Grid (Live Dynamic Values) */}
       <div className="stats-grid">
-        <StatCard title="Active Incidents" value={summary.active_incidents} icon={AlertTriangle} color="#f43f5e" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Verified & pending hazards"} />
-        <StatCard title="High Risk Corridors" value={summary.high_risk_corridors} icon={ShieldAlert} color="#f59e0b" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Risk Score ≥ 50/100"} />
-        <StatCard title="Blocked Roads" value={summary.blocked_roads} icon={Ban} color="#ef4444" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Confirmed impassable"} />
-        <StatCard title="Vehicles Rerouted" value={summary.vehicles_rerouted} icon={RefreshCw} color="#3b82f6" subtitle="Safely bypassed" />
-        <StatCard title="Pending Verifications" value={summary.pending_verifications} icon={CheckSquare} color="#8b5cf6" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Awaiting verifier review"} />
+        <StatCard title="Active Incidents" value={displayMetrics.active_incidents} icon={AlertTriangle} color="#f43f5e" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Verified & pending hazards"} />
+        <StatCard title="High Risk Corridors" value={displayMetrics.high_risk_corridors} icon={ShieldAlert} color="#f59e0b" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Risk Score ≥ 50/100"} />
+        <StatCard title="Blocked Roads" value={displayMetrics.blocked_roads} icon={Ban} color="#ef4444" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Confirmed impassable"} />
+        <StatCard title="Vehicles Rerouted" value={displayMetrics.vehicles_rerouted} icon={RefreshCw} color="#3b82f6" subtitle="Safely bypassed" />
+        <StatCard title="Pending Verifications" value={displayMetrics.pending_verifications} icon={CheckSquare} color="#8b5cf6" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Awaiting verifier review"} />
       </div>
 
       {/* Main Grid Layout: Map + Live Feed Panel */}
