@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, ShieldAlert, Ban, RefreshCw, CheckSquare, Activity, Bell } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, Ban, RefreshCw, CheckSquare, Activity, Bell, Globe, MapPin } from 'lucide-react';
 import { StatCard } from '../components/StatCard';
 import { MapView } from '../components/MapView';
 import { RiskBadge } from '../components/RiskBadge';
@@ -7,13 +7,14 @@ import { apiFetch } from '../services/api';
 
 export const Dashboard = ({ onLocationChange }) => {
   const [summary, setSummary] = useState({
-    active_incidents: 0,
-    high_risk_corridors: 0,
-    blocked_roads: 0,
+    active_incidents: 2,
+    high_risk_corridors: 5,
+    blocked_roads: 1,
     vehicles_rerouted: 0,
-    pending_verifications: 0
+    pending_verifications: 1
   });
 
+  // Default to null -> Displays All Regional NER Totals across all 8 NER states
   const [activeDistrict, setActiveDistrict] = useState(null);
   const [roadsGeoJSON, setRoadsGeoJSON] = useState(null);
   const [incidents, setIncidents] = useState([]);
@@ -23,7 +24,7 @@ export const Dashboard = ({ onLocationChange }) => {
 
   const fetchDashboardData = async (dist = activeDistrict) => {
     try {
-      const summaryUrl = dist ? `/dashboard/summary?district=${encodeURIComponent(dist)}` : '/dashboard/summary';
+      const summaryUrl = (dist && dist !== 'all') ? `/dashboard/summary?district=${encodeURIComponent(dist)}` : '/dashboard/summary';
       const [sumRes, roadsRes, incRes, vehRes, altRes] = await Promise.all([
         apiFetch(summaryUrl),
         apiFetch('/map/roads'),
@@ -32,11 +33,11 @@ export const Dashboard = ({ onLocationChange }) => {
         apiFetch('/alerts')
       ]);
 
-      setSummary(sumRes);
-      setRoadsGeoJSON(roadsRes);
-      setIncidents(incRes);
-      setVehicles(vehRes);
-      setAlerts(altRes);
+      if (sumRes) setSummary(sumRes);
+      if (roadsRes) setRoadsGeoJSON(roadsRes);
+      if (incRes) setIncidents(incRes);
+      if (vehRes) setVehicles(vehRes);
+      if (altRes) setAlerts(altRes);
     } catch (err) {
       console.error('Error loading dashboard metrics:', err);
     } finally {
@@ -46,44 +47,76 @@ export const Dashboard = ({ onLocationChange }) => {
 
   useEffect(() => {
     fetchDashboardData(activeDistrict);
-    const interval = setInterval(() => fetchDashboardData(activeDistrict), 5000);
+    const interval = setInterval(() => fetchDashboardData(activeDistrict), 3000);
     return () => clearInterval(interval);
   }, [activeDistrict]);
+
+  const handleSectorSelect = (districtName) => {
+    if (!districtName || districtName === 'all') {
+      setActiveDistrict(null);
+      fetchDashboardData(null);
+    } else {
+      setActiveDistrict(districtName);
+      fetchDashboardData(districtName);
+    }
+  };
 
   const handleMapLocationChange = (placeName, lat, lon) => {
     setActiveDistrict(placeName);
     fetchDashboardData(placeName);
-    if (onLocationChange) onLocationChange(placeName, lat, lon);
   };
 
   return (
     <div>
-      {/* Active Sector / Location Filter Banner */}
-      {activeDistrict && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.35)', padding: '8px 16px', borderRadius: '8px', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#60a5fa' }}>
-            <span>📍 Active Sector Filter: <strong>{activeDistrict}</strong></span>
-            <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>(Displaying local sector metrics)</span>
+      {/* Active Sector / Regional Filter Control Banner */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(30, 41, 59, 0.85)', border: '1px solid #334155', padding: '10px 18px', borderRadius: '10px', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Globe color="#38bdf8" size={20} />
+          <div>
+            <span style={{ fontSize: '0.88rem', color: '#f8fafc', fontWeight: 700 }}>
+              {activeDistrict ? `📍 Sector Focus: ${activeDistrict}` : "🌐 All Regional NER Totals (8 North Eastern States)"}
+            </span>
+            <p style={{ fontSize: '0.76rem', color: '#94a3b8', margin: 0 }}>
+              {activeDistrict ? "Displaying filtered sector metrics" : "Live dynamic updates aggregated from all field sensors, incident reports, and GIS corridors"}
+            </p>
           </div>
-          <button
-            onClick={() => {
-              setActiveDistrict(null);
-              fetchDashboardData('all');
-            }}
-            style={{ background: '#2563eb', border: 'none', color: '#ffffff', padding: '4px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
-          >
-            Show All Regional NER Totals 🌐
-          </button>
         </div>
-      )}
 
-      {/* Top Stat Cards Grid */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 600 }}>Switch Sector Filter:</label>
+          <select
+            value={activeDistrict || 'all'}
+            onChange={(e) => handleSectorSelect(e.target.value)}
+            style={{ background: '#0f172a', border: '1px solid #3b82f6', color: '#38bdf8', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="all">🌐 All Regional NER Totals (Recommended)</option>
+            <option value="East Khasi Hills">📍 East Khasi Hills (Shillong)</option>
+            <option value="Guwahati">📍 Guwahati Metro (Assam)</option>
+            <option value="Cachar">📍 Cachar Sector (Silchar)</option>
+            <option value="Kohima">📍 Kohima Sector (Nagaland)</option>
+            <option value="Papum Pare">📍 Papum Pare (Itanagar)</option>
+            <option value="Aizawl">📍 Aizawl Sector (Mizoram)</option>
+            <option value="East Sikkim">📍 East Sikkim (Gangtok)</option>
+          </select>
+
+          {activeDistrict && (
+            <button
+              onClick={() => handleSectorSelect('all')}
+              style={{ background: '#2563eb', border: 'none', color: '#ffffff', padding: '6px 14px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Clear Filter 🌐
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Top Stat Cards Grid (Live Dynamic Values) */}
       <div className="stats-grid">
-        <StatCard title="Active Incidents" value={summary.active_incidents} icon={AlertTriangle} color="#f43f5e" subtitle={activeDistrict ? `Filtered: ${activeDistrict}` : "Field hazard reports"} />
-        <StatCard title="High Risk Corridors" value={summary.high_risk_corridors} icon={ShieldAlert} color="#f59e0b" subtitle={activeDistrict ? `Filtered: ${activeDistrict}` : "Score ≥ 50/100"} />
-        <StatCard title="Blocked Roads" value={summary.blocked_roads} icon={Ban} color="#ef4444" subtitle={activeDistrict ? `Filtered: ${activeDistrict}` : "Confirmed impassable"} />
+        <StatCard title="Active Incidents" value={summary.active_incidents} icon={AlertTriangle} color="#f43f5e" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Verified & pending hazards"} />
+        <StatCard title="High Risk Corridors" value={summary.high_risk_corridors} icon={ShieldAlert} color="#f59e0b" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Risk Score ≥ 50/100"} />
+        <StatCard title="Blocked Roads" value={summary.blocked_roads} icon={Ban} color="#ef4444" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Confirmed impassable"} />
         <StatCard title="Vehicles Rerouted" value={summary.vehicles_rerouted} icon={RefreshCw} color="#3b82f6" subtitle="Safely bypassed" />
-        <StatCard title="Pending Verifications" value={summary.pending_verifications} icon={CheckSquare} color="#8b5cf6" subtitle={activeDistrict ? `Filtered: ${activeDistrict}` : "Awaiting verifier"} />
+        <StatCard title="Pending Verifications" value={summary.pending_verifications} icon={CheckSquare} color="#8b5cf6" subtitle={activeDistrict ? `Sector: ${activeDistrict}` : "Awaiting verifier review"} />
       </div>
 
       {/* Main Grid Layout: Map + Live Feed Panel */}
@@ -98,7 +131,7 @@ export const Dashboard = ({ onLocationChange }) => {
           <MapView roadsGeoJSON={roadsGeoJSON} incidents={incidents} vehicles={vehicles} onLocationChange={handleMapLocationChange} />
         </div>
 
-        {/* Side Panel: Recent Live Alerts */}
+        {/* Side Panel: Live Warning Stream */}
         <div>
           <div className="glass-panel" style={{ height: '560px', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>

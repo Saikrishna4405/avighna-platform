@@ -109,19 +109,10 @@ export const MapView = ({ roadsGeoJSON, incidents = [], vehicles = [], userLocat
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
           const loc = [lat, lon];
+          // Pin user location on Leaflet map without forcing global sector filter
           setDeviceLoc(loc);
           setActiveCenter(loc);
           setLocatingDevice(false);
-
-          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-            .then((r) => r.json())
-            .then((geo) => {
-              const townName = geo.address?.city || geo.address?.town || geo.address?.suburb || geo.address?.county || geo.address?.state || 'Live GPS';
-              if (onLocationChange) onLocationChange(townName, lat, lon);
-            })
-            .catch(() => {
-              if (onLocationChange) onLocationChange('Live Device GPS', lat, lon);
-            });
         },
         (err) => {
           alert(`Location access denied or unavailable: ${err.message}`);

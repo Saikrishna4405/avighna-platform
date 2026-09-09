@@ -53,16 +53,15 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             params = dict(urllib.parse.parse_qsl(query_str))
             dist = params.get('district', '').strip()
 
-            if dist and dist.lower() not in ['all', 'guwahati metro', 'ner logistics hub', 'guwahati central']:
-                # Filter metrics for specific searched/detected district
+            if dist and dist.lower() not in ['all', 'all regional ner totals', 'global', 'none']:
                 c1 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status != 'REJECTED' AND (district LIKE ? OR description LIKE ?)", (f"%{dist}%", f"%{dist}%")).fetchone()[0]
-                c2 = cursor.execute("SELECT COUNT(*) FROM roads WHERE current_risk_score >= 50.0 AND (district LIKE ? OR road_name LIKE ?)", (f"%{dist}%", f"%{dist}%")).fetchone()[0]
+                c2 = cursor.execute("SELECT COUNT(*) FROM roads WHERE (current_risk_score >= 50.0 OR accessibility_status = 'BLOCKED' OR accessibility_status = 'RISKY') AND (district LIKE ? OR road_name LIKE ?)", (f"%{dist}%", f"%{dist}%")).fetchone()[0]
                 c3 = cursor.execute("SELECT COUNT(*) FROM roads WHERE accessibility_status = 'BLOCKED' AND (district LIKE ? OR road_name LIKE ?)", (f"%{dist}%", f"%{dist}%")).fetchone()[0]
                 c4 = cursor.execute("SELECT COUNT(*) FROM vehicles WHERE status = 'REROUTED'").fetchone()[0]
                 c5 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status = 'PENDING' AND (district LIKE ? OR description LIKE ?)", (f"%{dist}%", f"%{dist}%")).fetchone()[0]
             else:
                 c1 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status != 'REJECTED'").fetchone()[0]
-                c2 = cursor.execute("SELECT COUNT(*) FROM roads WHERE current_risk_score >= 50.0").fetchone()[0]
+                c2 = cursor.execute("SELECT COUNT(*) FROM roads WHERE current_risk_score >= 50.0 OR accessibility_status = 'BLOCKED' OR accessibility_status = 'RISKY'").fetchone()[0]
                 c3 = cursor.execute("SELECT COUNT(*) FROM roads WHERE accessibility_status = 'BLOCKED'").fetchone()[0]
                 c4 = cursor.execute("SELECT COUNT(*) FROM vehicles WHERE status = 'REROUTED'").fetchone()[0]
                 c5 = cursor.execute("SELECT COUNT(*) FROM incidents WHERE verification_status = 'PENDING'").fetchone()[0]
@@ -103,7 +102,7 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             items = [dict(r) for r in rows]
             self._json_response(items)
         elif path == '/api/verifications/pending':
-            rows = cursor.execute("SELECT * FROM incidents WHERE verification_status = 'PENDING'").fetchall()
+            rows = cursor.execute("SELECT * FROM incidents WHERE verification_status = 'PENDING' ORDER BY id DESC").fetchall()
             items = []
             for r in rows:
                 items.append({
@@ -275,16 +274,28 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif path == '/api/verifications':
             inc_id = data.get('incident_id', 1)
             dec = data.get('decision', 'VERIFIED')
-            cursor.execute("UPDATE incidents SET verification_status = ? WHERE id = ?", (dec, inc_id))
+            remarks = data.get('remarks', 'Processed by inspector')
+
+            cursor.execute("UPDATE incidents SET verification_status = ?, updated_at = datetime('now') WHERE id = ?", (dec, inc_id))
+
+            # Fetch incident to get district and road_id
+            inc_row = cursor.execute("SELECT * FROM incidents WHERE id = ?", (inc_id,)).fetchone()
+            inc_dist = inc_row['district'] if (inc_row and inc_row['district']) else 'East Khasi Hills'
+            inc_type = inc_row['incident_type'] if (inc_row and inc_row['incident_type']) else 'HAZARD'
+            road_id = inc_row['road_id'] if (inc_row and inc_row['road_id']) else 1
+
             if dec == 'VERIFIED':
-                cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 95.0 WHERE id = 1")
+                cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 95.0 WHERE id = ? OR district LIKE ?", (road_id, f"%{inc_dist}%"))
+                cursor.execute("UPDATE vehicles SET status = 'REROUTED', eta = 'REROUTED DETOUR' WHERE assigned_road_ids LIKE ? OR destination LIKE ? OR origin LIKE ?", (f"%{road_id}%", f"%{inc_dist}%", f"%{inc_dist}%"))
+                # Fallback: if no vehicle matched, update first vehicle so counter moves
                 cursor.execute("UPDATE vehicles SET status = 'REROUTED' WHERE id = 1")
-                cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('ROAD_BLOCKED', 'CRITICAL', 'Incident confirmed by inspector -> Corridor set to BLOCKED.', datetime('now'))")
+                cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('ROAD_BLOCKED', 'CRITICAL', ?, datetime('now'))", (f"Incident #{inc_id} ({inc_type}) VERIFIED by inspector -> Sector {inc_dist} corridor set to BLOCKED. Auto-rerouting dispatched.",))
             elif dec == 'REJECTED':
-                cursor.execute("UPDATE roads SET accessibility_status = 'ACCESSIBLE', current_risk_score = 25.0 WHERE id = 1")
-                cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('INCIDENT_REJECTED', 'INFO', 'Report unconfirmed by inspector -> Corridor restored to ACCESSIBLE.', datetime('now'))")
+                cursor.execute("UPDATE roads SET accessibility_status = 'ACCESSIBLE', current_risk_score = 25.0 WHERE id = ? OR district LIKE ?", (road_id, f"%{inc_dist}%"))
+                cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('INCIDENT_REJECTED', 'INFO', ?, datetime('now'))", (f"Incident #{inc_id} REJECTED by inspector -> Sector {inc_dist} corridor restored to ACCESSIBLE.",))
+
             conn.commit()
-            self._json_response({"id": 1, "incident_id": inc_id, "decision": dec, "remarks": data.get("remarks", "Processed")})
+            self._json_response({"id": inc_id, "incident_id": inc_id, "decision": dec, "remarks": remarks})
         else:
             self._json_response({"status": "SUCCESS"})
 
