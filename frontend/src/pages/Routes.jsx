@@ -31,7 +31,7 @@ function RouteBoundsFitter({ polylineCoords }) {
   return null;
 }
 
-export const Routes = () => {
+export const Routes = ({ onLocationChange }) => {
   // Form State
   const [originName, setOriginName] = useState('Guwahati');
   const [originCoords, setOriginCoords] = useState({ lat: 26.1445, lon: 91.7362 });
@@ -114,9 +114,12 @@ export const Routes = () => {
 
   const selectOrigin = (item) => {
     const shortName = item.display_name.split(',')[0];
-    setOriginName(shortName);
+    const addr = item.address || {};
+    const cleanCity = addr.city || addr.town || addr.county || addr.state_district || addr.suburb || shortName;
+    setOriginName(cleanCity);
     setOriginCoords({ lat: parseFloat(item.lat), lon: parseFloat(item.lon) });
     setShowOriginMenu(false);
+    if (onLocationChange) onLocationChange(cleanCity);
   };
 
   const selectDest = (item) => {
@@ -164,6 +167,7 @@ export const Routes = () => {
       // Update confirmed coordinates
       setOriginCoords({ lat: startLat, lon: startLon });
       setDestCoords({ lat: endLat, lon: endLon });
+      if (onLocationChange && originName) onLocationChange(originName);
 
       // Step 2: Fetch OSRM Real Road Routing Geometry
       const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=geojson&alternatives=true`;
@@ -249,8 +253,10 @@ export const Routes = () => {
           try {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
             const data = await res.json();
-            const shortName = data.display_name ? data.display_name.split(',')[0] : 'My Live Location';
-            setOriginName(shortName);
+            const addr = data.address || {};
+            const cleanCity = addr.city || addr.town || addr.county || addr.state_district || addr.suburb || addr.state || (data.display_name ? data.display_name.split(',')[0] : 'Hyderabad');
+            setOriginName(cleanCity);
+            if (onLocationChange) onLocationChange(cleanCity);
           } catch (e) {
             setOriginName(`Live GPS (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
           }

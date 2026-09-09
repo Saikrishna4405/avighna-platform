@@ -23,7 +23,9 @@ export function App() {
   const [activePage, setActivePage] = useState('dashboard');
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
 
-  const [activeSector, setActiveSector] = useState(null);
+  const [activeSector, setActiveSector] = useState(() => {
+    return localStorage.getItem('avighna_active_sector') || null;
+  });
 
   useEffect(() => {
     const u = getCurrentUser();
@@ -50,11 +52,17 @@ export function App() {
 
   const handleLogout = () => {
     logoutUser();
+    localStorage.removeItem('avighna_active_sector');
     setCurrentUser(null);
   };
 
   const handleLocationChange = (placeName) => {
     setActiveSector(placeName);
+    if (placeName) {
+      localStorage.setItem('avighna_active_sector', placeName);
+    } else {
+      localStorage.removeItem('avighna_active_sector');
+    }
   };
 
   if (!currentUser) {
@@ -74,7 +82,7 @@ export function App() {
       case 'vehicles':
         return <Vehicles />;
       case 'routes':
-        return <Routes />;
+        return <Routes onLocationChange={handleLocationChange} />;
       case 'alerts':
         return <Alerts />;
       case 'verification':
