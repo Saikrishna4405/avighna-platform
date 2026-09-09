@@ -272,30 +272,40 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                 ]
             })
         elif path == '/api/verifications':
-            inc_id = data.get('incident_id', 1)
-            dec = data.get('decision', 'VERIFIED')
-            remarks = data.get('remarks', 'Processed by inspector')
+            try:
+                inc_id = data.get('incident_id', 1)
+                dec = data.get('decision', 'VERIFIED')
+                remarks = data.get('remarks', 'Processed by inspector')
 
-            cursor.execute("UPDATE incidents SET verification_status = ?, updated_at = datetime('now') WHERE id = ?", (dec, inc_id))
+                cursor.execute("UPDATE incidents SET verification_status = ?, updated_at = datetime('now') WHERE id = ?", (dec, inc_id))
 
-            # Fetch incident to get district and road_id
-            inc_row = cursor.execute("SELECT * FROM incidents WHERE id = ?", (inc_id,)).fetchone()
-            inc_dist = inc_row['district'] if (inc_row and inc_row['district']) else 'East Khasi Hills'
-            inc_type = inc_row['incident_type'] if (inc_row and inc_row['incident_type']) else 'HAZARD'
-            road_id = inc_row['road_id'] if (inc_row and inc_row['road_id']) else 1
+                # Fetch incident to get district and road_id
+                inc_row = cursor.execute("SELECT * FROM incidents WHERE id = ?", (inc_id,)).fetchone()
+                inc_dist = 'East Khasi Hills'
+                inc_type = 'HAZARD'
+                road_id = 1
+                if inc_row:
+                    try:
+                        d_row = dict(inc_row)
+                        inc_dist = d_row.get('district') or 'East Khasi Hills'
+                        inc_type = d_row.get('incident_type') or 'HAZARD'
+                        road_id = d_row.get('road_id') or 1
+                    except Exception:
+                        pass
 
-            if dec == 'VERIFIED':
-                cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 95.0 WHERE id = ? OR district LIKE ?", (road_id, f"%{inc_dist}%"))
-                cursor.execute("UPDATE vehicles SET status = 'REROUTED', eta = 'REROUTED DETOUR' WHERE assigned_road_ids LIKE ? OR destination LIKE ? OR origin LIKE ?", (f"%{road_id}%", f"%{inc_dist}%", f"%{inc_dist}%"))
-                # Fallback: if no vehicle matched, update first vehicle so counter moves
-                cursor.execute("UPDATE vehicles SET status = 'REROUTED' WHERE id = 1")
-                cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('ROAD_BLOCKED', 'CRITICAL', ?, datetime('now'))", (f"Incident #{inc_id} ({inc_type}) VERIFIED by inspector -> Sector {inc_dist} corridor set to BLOCKED. Auto-rerouting dispatched.",))
-            elif dec == 'REJECTED':
-                cursor.execute("UPDATE roads SET accessibility_status = 'ACCESSIBLE', current_risk_score = 25.0 WHERE id = ? OR district LIKE ?", (road_id, f"%{inc_dist}%"))
-                cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('INCIDENT_REJECTED', 'INFO', ?, datetime('now'))", (f"Incident #{inc_id} REJECTED by inspector -> Sector {inc_dist} corridor restored to ACCESSIBLE.",))
+                if dec == 'VERIFIED':
+                    cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 95.0 WHERE id = ? OR district LIKE ?", (road_id, f"%{inc_dist}%"))
+                    cursor.execute("UPDATE vehicles SET status = 'REROUTED', eta = 'REROUTED DETOUR' WHERE assigned_road_ids LIKE ? OR destination LIKE ? OR origin LIKE ?", (f"%{road_id}%", f"%{inc_dist}%", f"%{inc_dist}%"))
+                    cursor.execute("UPDATE vehicles SET status = 'REROUTED' WHERE id = 1")
+                    cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('ROAD_BLOCKED', 'CRITICAL', ?, datetime('now'))", (f"Incident #{inc_id} ({inc_type}) VERIFIED by inspector -> Sector {inc_dist} corridor set to BLOCKED. Auto-rerouting dispatched.",))
+                elif dec == 'REJECTED':
+                    cursor.execute("UPDATE roads SET accessibility_status = 'ACCESSIBLE', current_risk_score = 25.0 WHERE id = ? OR district LIKE ?", (road_id, f"%{inc_dist}%"))
+                    cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('INCIDENT_REJECTED', 'INFO', ?, datetime('now'))", (f"Incident #{inc_id} REJECTED by inspector -> Sector {inc_dist} corridor restored to ACCESSIBLE.",))
 
-            conn.commit()
-            self._json_response({"id": inc_id, "incident_id": inc_id, "decision": dec, "remarks": remarks})
+                conn.commit()
+                self._json_response({"id": inc_id, "incident_id": inc_id, "decision": dec, "remarks": remarks})
+            except Exception as ex:
+                self._json_response({"status": "ERROR", "detail": str(ex)}, status_code=500)
         else:
             self._json_response({"status": "SUCCESS"})
 
