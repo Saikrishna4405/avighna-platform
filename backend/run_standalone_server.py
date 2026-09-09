@@ -157,13 +157,29 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             )
             self._json_response(res)
         elif path == '/api/incidents':
+            itype = data.get('incident_type', 'LANDSLIDE')
+            sev = data.get('severity', 'HIGH')
+            desc = data.get('description', 'Field hazard report')
+            dist = data.get('district', 'East Khasi Hills')
+
             cursor.execute(
                 "INSERT INTO incidents (incident_type, severity, description, latitude, longitude, photo_url, verification_status, district, risk_score, ai_recommendation, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
-                (data.get('incident_type', 'LANDSLIDE'), data.get('severity', 'HIGH'), data.get('description', 'Field report'), data.get('latitude', 25.90), data.get('longitude', 91.80), data.get('photo_url', ''), 'PENDING', data.get('district', 'East Khasi Hills'), 72.0, 'Alert authorities; field verification requested.')
+                (itype, sev, desc, data.get('latitude', 25.90), data.get('longitude', 91.80), data.get('photo_url', ''), 'PENDING', dist, 82.5, f"Alert issued for {dist}; verification queue updated.")
             )
             conn.commit()
             new_id = cursor.lastrowid
-            self._json_response({"id": new_id, "status": "LOGGED", "risk_score": 72.0, "ai_recommendation": "Alert authorities; field verification requested."})
+
+            # Broadcast alert to live warning stream
+            cursor.execute(
+                "INSERT INTO alerts (alert_type, severity, message, created_at) VALUES (?, ?, ?, datetime('now'))",
+                (f"{itype}_REPORTED", sev, f"{itype} reported in {dist}: {desc}")
+            )
+
+            # Elevate road risk score in district so High Risk Corridors count increases live
+            cursor.execute("UPDATE roads SET current_risk_score = 88.0, accessibility_status = 'RISKY' WHERE district LIKE ?", (f"%{dist}%",))
+            conn.commit()
+
+            self._json_response({"id": new_id, "status": "LOGGED", "risk_score": 82.5, "ai_recommendation": f"Alert issued for {dist}; verification queue updated."})
         elif path == '/api/routes/recommend':
             orig = data.get('origin_name', 'Guwahati').strip()
             dest = data.get('destination_name', 'Shillong').strip()
@@ -243,6 +259,7 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif path == '/api/demo/run-scenario':
             cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 92.0 WHERE id = 1")
             cursor.execute("UPDATE vehicles SET status = 'REROUTED', eta = '3h 15m', current_route = ? WHERE id = 1", (json.dumps([[26.14, 91.73], [26.05, 91.50], [25.57, 91.88]]),))
+            cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('EMERGENCY_SIMULATION', 'CRITICAL', 'Simulated 95mm Monsoon Rain in Shillong Sector. NH-40 Corridor BLOCKED.', datetime('now'))")
             conn.commit()
             self._json_response({
                 "status": "SUCCESS",
@@ -260,10 +277,14 @@ class AvighnaHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             dec = data.get('decision', 'VERIFIED')
             cursor.execute("UPDATE incidents SET verification_status = ? WHERE id = ?", (dec, inc_id))
             if dec == 'VERIFIED':
-                cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 90.0 WHERE id = 1")
+                cursor.execute("UPDATE roads SET accessibility_status = 'BLOCKED', current_risk_score = 95.0 WHERE id = 1")
                 cursor.execute("UPDATE vehicles SET status = 'REROUTED' WHERE id = 1")
+                cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('ROAD_BLOCKED', 'CRITICAL', 'Incident confirmed by inspector -> Corridor set to BLOCKED.', datetime('now'))")
+            elif dec == 'REJECTED':
+                cursor.execute("UPDATE roads SET accessibility_status = 'ACCESSIBLE', current_risk_score = 25.0 WHERE id = 1")
+                cursor.execute("INSERT INTO alerts (alert_type, severity, message, created_at) VALUES ('INCIDENT_REJECTED', 'INFO', 'Report unconfirmed by inspector -> Corridor restored to ACCESSIBLE.', datetime('now'))")
             conn.commit()
-            self._json_response({"id": 1, "incident_id": inc_id, "decision": dec, "remarks": data.get("remarks", "Verified")})
+            self._json_response({"id": 1, "incident_id": inc_id, "decision": dec, "remarks": data.get("remarks", "Processed")})
         else:
             self._json_response({"status": "SUCCESS"})
 
