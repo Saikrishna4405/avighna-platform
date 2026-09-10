@@ -50,6 +50,52 @@ function RouteBoundsFitter({ polylineCoords }) {
   return null;
 }
 
+const indianCitiesDatabase = [
+  { display_name: 'Guwahati, Kamrup Metropolitan, Assam', lat: 26.1445, lon: 91.7362 },
+  { display_name: 'Shillong, East Khasi Hills, Meghalaya', lat: 25.5788, lon: 91.8933 },
+  { display_name: 'Silchar, Cachar, Assam', lat: 24.8333, lon: 92.7789 },
+  { display_name: 'Kohima, Kohima District, Nagaland', lat: 25.6747, lon: 94.1100 },
+  { display_name: 'Dimapur, Nagaland', lat: 25.9060, lon: 93.7270 },
+  { display_name: 'Itanagar, Papum Pare, Arunachal Pradesh', lat: 27.0844, lon: 93.6053 },
+  { display_name: 'Imphal, Imphal West, Manipur', lat: 24.8170, lon: 93.9368 },
+  { display_name: 'Aizawl, Mizoram', lat: 23.7307, lon: 92.7173 },
+  { display_name: 'Agartala, West Tripura, Tripura', lat: 23.8315, lon: 91.2868 },
+  { display_name: 'Gangtok, East Sikkim, Sikkim', lat: 27.3389, lon: 88.6065 },
+  { display_name: 'Hyderabad, Telangana', lat: 17.3850, lon: 78.4867 },
+  { display_name: 'Serilingampalle Mandal, Ranga Reddy, Telangana', lat: 17.4833, lon: 78.3158 },
+  { display_name: 'Mahabubnagar, Telangana', lat: 16.7488, lon: 78.0035 },
+  { display_name: 'Mahadevpura, Bengaluru, Karnataka', lat: 12.9922, lon: 77.6968 },
+  { display_name: 'Mahape, Navi Mumbai, Maharashtra', lat: 19.1172, lon: 73.0163 },
+  { display_name: 'Thiruvananthapuram, Kerala', lat: 8.5241, lon: 76.9366 },
+  { display_name: 'Tiruchirappalli, Tamil Nadu', lat: 10.7905, lon: 78.7047 },
+  { display_name: 'Tirupati, Andhra Pradesh', lat: 13.6288, lon: 79.4192 },
+  { display_name: 'Tiruppur, Tamil Nadu', lat: 11.1085, lon: 77.3411 },
+  { display_name: 'Thane, Maharashtra', lat: 19.2183, lon: 72.9781 },
+  { display_name: 'Thrissur, Kerala', lat: 10.5276, lon: 76.2144 },
+  { display_name: 'Tezpur, Sonitpur, Assam', lat: 26.6338, lon: 92.8006 },
+  { display_name: 'Jorhat, Assam', lat: 26.7509, lon: 94.2037 },
+  { display_name: 'Dibrugarh, Assam', lat: 27.4728, lon: 94.9120 },
+  { display_name: 'Tura, West Garo Hills, Meghalaya', lat: 25.5141, lon: 90.2032 },
+  { display_name: 'Delhi, NCT of Delhi', lat: 28.6139, lon: 77.2090 },
+  { display_name: 'Mumbai, Maharashtra', lat: 19.0760, lon: 72.8777 },
+  { display_name: 'Bengaluru, Karnataka', lat: 12.9716, lon: 77.5946 },
+  { display_name: 'Kolkata, West Bengal', lat: 22.5726, lon: 88.3639 },
+  { display_name: 'Chennai, Tamil Nadu', lat: 13.0827, lon: 80.2707 },
+  { display_name: 'Pune, Maharashtra', lat: 18.5204, lon: 73.8567 },
+  { display_name: 'Ahmedabad, Gujarat', lat: 23.0225, lon: 72.5714 },
+  { display_name: 'Jaipur, Rajasthan', lat: 26.9124, lon: 75.7873 },
+  { display_name: 'Lucknow, Uttar Pradesh', lat: 26.8467, lon: 80.9462 },
+  { display_name: 'Patna, Bihar', lat: 25.5941, lon: 85.1376 },
+  { display_name: 'Bhubaneswar, Odisha', lat: 20.2961, lon: 85.8245 },
+  { display_name: 'Ranchi, Jharkhand', lat: 23.3441, lon: 85.3096 },
+  { display_name: 'Raipur, Chhattisgarh', lat: 21.2514, lon: 81.6296 },
+  { display_name: 'Bhopal, Madhya Pradesh', lat: 23.2599, lon: 77.4126 },
+  { display_name: 'Chandigarh, Punjab', lat: 30.7333, lon: 76.7794 },
+  { display_name: 'Dehradun, Uttarakhand', lat: 30.3165, lon: 78.0322 },
+  { display_name: 'Shimla, Himachal Pradesh', lat: 31.1048, lon: 77.1734 },
+  { display_name: 'Srinagar, Jammu and Kashmir', lat: 34.0837, lon: 74.7973 }
+];
+
 export const Routes = ({ onLocationChange }) => {
   // Form State
   const [originName, setOriginName] = useState('Guwahati');
@@ -94,23 +140,42 @@ export const Routes = ({ onLocationChange }) => {
     setOriginName(value);
     setOriginCoordsConfirmed(false);
     setValidationError('');
-    if (value.trim().length < 2) {
+
+    if (!value || value.trim().length < 1) {
       setOriginSuggestions([]);
       setShowOriginMenu(false);
       return;
     }
-    setSearchingOrigin(true);
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(value)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setOriginSuggestions(Array.isArray(data) ? data : []);
-        setShowOriginMenu(true);
+
+    const valLower = value.trim().toLowerCase();
+    const localMatches = indianCitiesDatabase.filter(item => 
+      item.display_name.toLowerCase().includes(valLower)
+    );
+
+    if (localMatches.length > 0) {
+      setOriginSuggestions(localMatches);
+      setShowOriginMenu(true);
+    }
+
+    if (value.trim().length >= 2) {
+      setSearchingOrigin(true);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(value)}`);
+        if (res.ok) {
+          const onlineData = await res.json();
+          if (Array.isArray(onlineData) && onlineData.length > 0) {
+            const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
+            const filteredOnline = onlineData.filter(d => !existingNames.has(d.display_name.toLowerCase()));
+            const combined = [...localMatches, ...filteredOnline];
+            setOriginSuggestions(combined);
+            setShowOriginMenu(true);
+          }
+        }
+      } catch (e) {
+        if (localMatches.length > 0) setShowOriginMenu(true);
+      } finally {
+        setSearchingOrigin(false);
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSearchingOrigin(false);
     }
   };
 
@@ -119,23 +184,42 @@ export const Routes = ({ onLocationChange }) => {
     setDestName(value);
     setDestCoordsConfirmed(false);
     setValidationError('');
-    if (value.trim().length < 2) {
+
+    if (!value || value.trim().length < 1) {
       setDestSuggestions([]);
       setShowDestMenu(false);
       return;
     }
-    setSearchingDest(true);
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(value)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setDestSuggestions(Array.isArray(data) ? data : []);
-        setShowDestMenu(true);
+
+    const valLower = value.trim().toLowerCase();
+    const localMatches = indianCitiesDatabase.filter(item => 
+      item.display_name.toLowerCase().includes(valLower)
+    );
+
+    if (localMatches.length > 0) {
+      setDestSuggestions(localMatches);
+      setShowDestMenu(true);
+    }
+
+    if (value.trim().length >= 2) {
+      setSearchingDest(true);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(value)}`);
+        if (res.ok) {
+          const onlineData = await res.json();
+          if (Array.isArray(onlineData) && onlineData.length > 0) {
+            const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
+            const filteredOnline = onlineData.filter(d => !existingNames.has(d.display_name.toLowerCase()));
+            const combined = [...localMatches, ...filteredOnline];
+            setDestSuggestions(combined);
+            setShowDestMenu(true);
+          }
+        }
+      } catch (e) {
+        if (localMatches.length > 0) setShowDestMenu(true);
+      } finally {
+        setSearchingDest(false);
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSearchingDest(false);
     }
   };
 
@@ -392,7 +476,7 @@ export const Routes = ({ onLocationChange }) => {
                 className="form-input"
                 value={originName}
                 onChange={(e) => handleOriginInputChange(e.target.value)}
-                onFocus={() => originSuggestions.length > 0 && setShowOriginMenu(true)}
+                onFocus={() => handleOriginInputChange(originName)}
                 required
                 placeholder="Type city or place (e.g. Guwahati, Shillong, Delhi)..."
                 style={{ paddingRight: '36px' }}
@@ -402,17 +486,20 @@ export const Routes = ({ onLocationChange }) => {
 
             {/* Suggestions Dropdown */}
             {showOriginMenu && originSuggestions.length > 0 && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 2000, background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 20px rgba(0,0,0,0.5)', maxHeight: '200px', overflowY: 'auto' }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999, background: '#0f172a', border: '1px solid #3b82f6', borderRadius: '8px', marginTop: '4px', boxShadow: '0 12px 28px rgba(0,0,0,0.8)', maxHeight: '220px', overflowY: 'auto' }}>
                 {originSuggestions.map((item, i) => (
                   <div
                     key={i}
-                    onClick={() => selectOrigin(item)}
-                    style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #334155', fontSize: '0.8rem', color: '#cbd5e1' }}
-                    onMouseEnter={(e) => e.target.style.background = '#334155'}
-                    onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectOrigin(item);
+                    }}
+                    style={{ padding: '9px 14px', cursor: 'pointer', borderBottom: '1px solid #1e293b', fontSize: '0.82rem', color: '#f8fafc', display: 'flex', alignItems: 'center' }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#1e293b'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
-                    <MapPin size={12} color="#38bdf8" style={{ display: 'inline', marginRight: '6px' }} />
-                    {item.display_name}
+                    <MapPin size={14} color="#38bdf8" style={{ display: 'inline', marginRight: '8px', flexShrink: 0 }} />
+                    <span style={{ fontWeight: 500 }}>{item.display_name}</span>
                   </div>
                 ))}
               </div>
@@ -428,7 +515,7 @@ export const Routes = ({ onLocationChange }) => {
                 className="form-input"
                 value={destName}
                 onChange={(e) => handleDestInputChange(e.target.value)}
-                onFocus={() => destSuggestions.length > 0 && setShowDestMenu(true)}
+                onFocus={() => handleDestInputChange(destName)}
                 required
                 placeholder="Type city or place (e.g. Shillong, Silchar, Kohima)..."
                 style={{ paddingRight: '36px' }}
@@ -438,17 +525,20 @@ export const Routes = ({ onLocationChange }) => {
 
             {/* Suggestions Dropdown */}
             {showDestMenu && destSuggestions.length > 0 && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 2000, background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', marginTop: '4px', boxShadow: '0 10px 20px rgba(0,0,0,0.5)', maxHeight: '200px', overflowY: 'auto' }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999, background: '#0f172a', border: '1px solid #f43f5e', borderRadius: '8px', marginTop: '4px', boxShadow: '0 12px 28px rgba(0,0,0,0.8)', maxHeight: '220px', overflowY: 'auto' }}>
                 {destSuggestions.map((item, i) => (
                   <div
                     key={i}
-                    onClick={() => selectDest(item)}
-                    style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #334155', fontSize: '0.8rem', color: '#cbd5e1' }}
-                    onMouseEnter={(e) => e.target.style.background = '#334155'}
-                    onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectDest(item);
+                    }}
+                    style={{ padding: '9px 14px', cursor: 'pointer', borderBottom: '1px solid #1e293b', fontSize: '0.82rem', color: '#f8fafc', display: 'flex', alignItems: 'center' }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#1e293b'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
-                    <MapPin size={12} color="#f43f5e" style={{ display: 'inline', marginRight: '6px' }} />
-                    {item.display_name}
+                    <MapPin size={14} color="#f43f5e" style={{ display: 'inline', marginRight: '8px', flexShrink: 0 }} />
+                    <span style={{ fontWeight: 500 }}>{item.display_name}</span>
                   </div>
                 ))}
               </div>
