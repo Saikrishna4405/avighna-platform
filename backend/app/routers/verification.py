@@ -43,7 +43,7 @@ def get_pending_verifications(db: Session = Depends(get_db)):
 def submit_verification(
     req: VerificationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["ADMIN", "VERIFIER"]))
+    current_user: User = Depends(require_roles(["ADMIN", "VERIFIER", "DISTRICT_PLANNER", "FIELD_OFFICER", "LOGISTICS_OPERATOR", "PUBLIC_CITIZEN"]))
 ):
     """
     Submit verifier decision (VERIFIED / REJECTED) with remarks.
@@ -90,7 +90,7 @@ def update_verification(
     id: int,
     req: VerificationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["ADMIN", "VERIFIER"]))
+    current_user: User = Depends(require_roles(["ADMIN", "VERIFIER", "DISTRICT_PLANNER", "FIELD_OFFICER", "LOGISTICS_OPERATOR", "PUBLIC_CITIZEN"]))
 ):
     """
     Update an existing verification record.
