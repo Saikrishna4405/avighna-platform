@@ -433,3 +433,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #0f172a !important;
 }
 
+.dark-tile-layer {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+

@@ -183,16 +183,19 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
 
   const tileSources = {
     dark: {
-      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{y}/{x}{r}.png',
-      attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png',
+      attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      className: 'dark-tile-layer'
     },
     street: {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png',
-      attr: '&copy; OpenStreetMap contributors'
+      attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      className: ''
     },
     satellite: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attr: '&copy; Esri World Imagery'
+      attr: '&copy; Esri World Imagery',
+      className: ''
     }
   };
 
@@ -292,9 +295,11 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           key={mapTheme}
           attribution={tileSources[mapTheme].attr}
           url={tileSources[mapTheme].url}
+          className={tileSources[mapTheme].className || ''}
           maxNativeZoom={18}
           maxZoom={21}
         />
+
 
         {/* Render Road Network Corridors with High-Contrast Outer Outlines */}
         {roadsGeoJSON && roadsGeoJSON.features && roadsGeoJSON.features.map((feature, idx) => {
