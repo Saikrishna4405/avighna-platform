@@ -187,7 +187,17 @@ export const Incidents = () => {
                   </td>
                   <td style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{inc.latitude.toFixed(2)}, {inc.longitude.toFixed(2)} ({inc.district})</td>
                   <td>
-                    <span className="badge badge-low">{inc.verification_status}</span>
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      background: inc.verification_status === 'PENDING' ? 'rgba(245, 158, 11, 0.2)' : inc.verification_status === 'VERIFIED' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                      color: inc.verification_status === 'PENDING' ? '#fbbf24' : inc.verification_status === 'VERIFIED' ? '#34d399' : '#f87171',
+                      border: `1px solid ${inc.verification_status === 'PENDING' ? 'rgba(245, 158, 11, 0.4)' : inc.verification_status === 'VERIFIED' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`
+                    }}>
+                      {inc.verification_status}
+                    </span>
                   </td>
                   <td style={{ fontWeight: 700, color: inc.risk_score > 70 ? '#fda4af' : '#34d399' }}>
                     {inc.risk_score ? `${inc.risk_score}/100` : 'N/A'}
