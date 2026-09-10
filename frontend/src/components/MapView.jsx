@@ -292,7 +292,8 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           key={mapTheme}
           attribution={tileSources[mapTheme].attr}
           url={tileSources[mapTheme].url}
-          maxZoom={18}
+          maxNativeZoom={18}
+          maxZoom={21}
         />
 
         {/* Render Road Network Corridors with High-Contrast Outer Outlines */}
