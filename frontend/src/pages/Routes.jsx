@@ -67,12 +67,17 @@ const normalizeSearchTerm = (str) => {
 };
 
 const indianCitiesDatabase = [
+  { display_name: 'Miyapur (మియాపూర్), Hyderabad, Telangana', aliases: ['miyapur', 'మియాపూర్', 'miyapur metro', 'miyapur bus stop'], lat: 17.4969, lon: 78.3654 },
+  { display_name: 'Chandanagar (చందానగర్), Hyderabad, Telangana', aliases: ['chandanagar', 'చందానగర్'], lat: 17.4925, lon: 78.3263 },
+  { display_name: 'Kukatpally (కూకట్‌పల్లి), Hyderabad, Telangana', aliases: ['kukatpally', 'కూకట్‌పల్లి', 'kphb'], lat: 17.4849, lon: 78.4138 },
+  { display_name: 'Gachibowli (గచ్చిబౌలి), Hyderabad, Telangana', aliases: ['gachibowli', 'గచ్చిబౌలి'], lat: 17.4401, lon: 78.3489 },
+  { display_name: 'Madhapur (మాధాపూర్), Hyderabad, Telangana', aliases: ['madhapur', 'మాధాపూర్', 'hitec city'], lat: 17.4483, lon: 78.3915 },
+  { display_name: 'Serilingampalle (శేరిలింగంపల్లి), Ranga Reddy, Telangana', aliases: ['serilingampalle', 'serilingampally', 'శేరిలింగంపల్లి', 'lingampally'], lat: 17.4833, lon: 78.3158 },
+  { display_name: 'Hyderabad (హైదరాబాద్), Telangana', aliases: ['hyderabad', 'హైదరాబాద్', 'hyd', 'secunderabad'], lat: 17.3850, lon: 78.4867 },
   { display_name: 'Guwahati (గౌహతి), Kamrup Metropolitan, Assam', aliases: ['guwahati', 'gauhati', 'గౌహతి', 'kamrup'], lat: 26.1445, lon: 91.7362 },
   { display_name: 'Shillong (షిలాంగ్), East Khasi Hills, Meghalaya', aliases: ['shillong', 'silong', 'షిలాంగ్'], lat: 25.5788, lon: 91.8933 },
   { display_name: 'Tirupati (Thirupathi / Tirupathi / తిరుపతి), Andhra Pradesh', aliases: ['tirupati', 'thirupathi', 'tirupathi', 'thirupati', 'తిరుపతి'], lat: 13.6288, lon: 79.4192 },
   { display_name: 'Mahadevpur (Mahadevpura / Mahadevpuram / మహాదేవ్‌పూర్), Telangana', aliases: ['mahadevpur', 'mahadevpura', 'mahadevpuram', 'మహాదేవ్‌పూర్', 'మహాదేవపూర్'], lat: 18.6657, lon: 79.9142 },
-  { display_name: 'Hyderabad (హైదరాబాద్), Telangana', aliases: ['hyderabad', 'హైదరాబాద్', 'hyd', 'secunderabad'], lat: 17.3850, lon: 78.4867 },
-  { display_name: 'Serilingampalle (శేరిలింగంపల్లి), Ranga Reddy, Telangana', aliases: ['serilingampalle', 'serilingampally', 'శేరిలింగంపల్లి', 'lingampally'], lat: 17.4833, lon: 78.3158 },
   { display_name: 'Mahabubnagar (మహబూబ్‌నగర్), Telangana', aliases: ['mahabubnagar', 'mahboobnagar', 'మహబూబ్‌నగర్'], lat: 16.7488, lon: 78.0035 },
   { display_name: 'Silchar, Cachar, Assam', aliases: ['silchar', 'cachar'], lat: 24.8333, lon: 92.7789 },
   { display_name: 'Kohima, Nagaland', aliases: ['kohima'], lat: 25.6747, lon: 94.1100 },
@@ -179,27 +184,49 @@ export const Routes = ({ onLocationChange }) => {
     }
 
     const localMatches = filterLocalMatches(value);
-    if (localMatches.length > 0) {
-      setOriginSuggestions(localMatches);
-      setShowOriginMenu(true);
-    }
+    // Immediately clear old stale suggestions and set fresh matches
+    setOriginSuggestions(localMatches);
+    setShowOriginMenu(true);
 
     if (value.trim().length >= 2) {
       setSearchingOrigin(true);
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=te,hi,en&q=${encodeURIComponent(value)}`);
+        // Query Photon Geocoding API (universal coverage for every village, mandal & town)
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(value)}&limit=8`);
         if (res.ok) {
-          const onlineData = await res.json();
-          if (Array.isArray(onlineData) && onlineData.length > 0) {
+          const data = await res.json();
+          if (data && data.features && data.features.length > 0) {
+            const onlineResults = data.features.map(f => {
+              const p = f.properties;
+              const nameParts = [p.name, p.district || p.city || p.county, p.state, p.country].filter(Boolean);
+              return {
+                display_name: nameParts.join(', '),
+                lat: f.geometry.coordinates[1],
+                lon: f.geometry.coordinates[0]
+              };
+            });
+
             const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
-            const filteredOnline = onlineData.filter(d => !existingNames.has(d.display_name.toLowerCase()));
+            const filteredOnline = onlineResults.filter(d => !existingNames.has(d.display_name.toLowerCase()));
             const combined = [...localMatches, ...filteredOnline];
             setOriginSuggestions(combined);
             setShowOriginMenu(true);
           }
         }
       } catch (e) {
-        if (localMatches.length > 0) setShowOriginMenu(true);
+        // Fallback to Nominatim if Photon fails
+        try {
+          const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=te,hi,en&q=${encodeURIComponent(value)}`);
+          if (nomRes.ok) {
+            const nomData = await nomRes.json();
+            if (Array.isArray(nomData) && nomData.length > 0) {
+              const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
+              const filteredNom = nomData.filter(d => !existingNames.has(d.display_name.toLowerCase()));
+              setOriginSuggestions([...localMatches, ...filteredNom]);
+              setShowOriginMenu(true);
+            }
+          }
+        } catch (err) {}
       } finally {
         setSearchingOrigin(false);
       }
@@ -219,27 +246,49 @@ export const Routes = ({ onLocationChange }) => {
     }
 
     const localMatches = filterLocalMatches(value);
-    if (localMatches.length > 0) {
-      setDestSuggestions(localMatches);
-      setShowDestMenu(true);
-    }
+    // Immediately clear old stale suggestions and set fresh matches
+    setDestSuggestions(localMatches);
+    setShowDestMenu(true);
 
     if (value.trim().length >= 2) {
       setSearchingDest(true);
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=te,hi,en&q=${encodeURIComponent(value)}`);
+        // Query Photon Geocoding API (universal coverage for every village, mandal & town)
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(value)}&limit=8`);
         if (res.ok) {
-          const onlineData = await res.json();
-          if (Array.isArray(onlineData) && onlineData.length > 0) {
+          const data = await res.json();
+          if (data && data.features && data.features.length > 0) {
+            const onlineResults = data.features.map(f => {
+              const p = f.properties;
+              const nameParts = [p.name, p.district || p.city || p.county, p.state, p.country].filter(Boolean);
+              return {
+                display_name: nameParts.join(', '),
+                lat: f.geometry.coordinates[1],
+                lon: f.geometry.coordinates[0]
+              };
+            });
+
             const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
-            const filteredOnline = onlineData.filter(d => !existingNames.has(d.display_name.toLowerCase()));
+            const filteredOnline = onlineResults.filter(d => !existingNames.has(d.display_name.toLowerCase()));
             const combined = [...localMatches, ...filteredOnline];
             setDestSuggestions(combined);
             setShowDestMenu(true);
           }
         }
       } catch (e) {
-        if (localMatches.length > 0) setShowDestMenu(true);
+        // Fallback to Nominatim if Photon fails
+        try {
+          const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=te,hi,en&q=${encodeURIComponent(value)}`);
+          if (nomRes.ok) {
+            const nomData = await nomRes.json();
+            if (Array.isArray(nomData) && nomData.length > 0) {
+              const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
+              const filteredNom = nomData.filter(d => !existingNames.has(d.display_name.toLowerCase()));
+              setDestSuggestions([...localMatches, ...filteredNom]);
+              setShowDestMenu(true);
+            }
+          }
+        } catch (err) {}
       } finally {
         setSearchingDest(false);
       }
@@ -249,8 +298,12 @@ export const Routes = ({ onLocationChange }) => {
   const selectOrigin = (item) => {
     const shortName = item.display_name ? item.display_name.split(',')[0] : 'Origin';
     setOriginName(shortName);
-    setOriginCoords({ lat: parseFloat(item.lat), lon: parseFloat(item.lon) });
-    setOriginCoordsConfirmed(true);
+    if (item.lat && item.lon) {
+      setOriginCoords({ lat: parseFloat(item.lat), lon: parseFloat(item.lon) });
+      setOriginCoordsConfirmed(true);
+    } else {
+      setOriginCoordsConfirmed(false);
+    }
     setShowOriginMenu(false);
     if (onLocationChange) onLocationChange(shortName);
   };
@@ -258,8 +311,12 @@ export const Routes = ({ onLocationChange }) => {
   const selectDest = (item) => {
     const shortName = item.display_name ? item.display_name.split(',')[0] : 'Destination';
     setDestName(shortName);
-    setDestCoords({ lat: parseFloat(item.lat), lon: parseFloat(item.lon) });
-    setDestCoordsConfirmed(true);
+    if (item.lat && item.lon) {
+      setDestCoords({ lat: parseFloat(item.lat), lon: parseFloat(item.lon) });
+      setDestCoordsConfirmed(true);
+    } else {
+      setDestCoordsConfirmed(false);
+    }
     setShowDestMenu(false);
   };
 
