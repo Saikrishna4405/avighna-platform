@@ -179,23 +179,20 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
     return '#10b981';
   };
 
-  const [mapTheme, setMapTheme] = useState('dark'); // 'dark', 'street', 'satellite'
+  const [mapTheme, setMapTheme] = useState('street'); // 'street', 'dark', 'satellite'
 
   const tileSources = {
-    dark: {
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png',
-      attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      className: 'dark-tile-layer'
-    },
     street: {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png',
-      attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      className: ''
+      attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    },
+    dark: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      attr: '&copy; Esri, DeLorme, NAVTEQ'
     },
     satellite: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attr: '&copy; Esri World Imagery',
-      className: ''
+      attr: '&copy; Esri World Imagery'
     }
   };
 
@@ -222,16 +219,16 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           {/* Map Layer Theme Buttons */}
           <div style={{ display: 'flex', background: '#0f172a', borderRadius: '6px', padding: '2px', border: '1px solid #334155' }}>
             <button
-              onClick={() => setMapTheme('dark')}
-              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'dark' ? '#2563eb' : 'transparent', color: mapTheme === 'dark' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
-            >
-              🌙 Dark
-            </button>
-            <button
               onClick={() => setMapTheme('street')}
               style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'street' ? '#2563eb' : 'transparent', color: mapTheme === 'street' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
             >
               🗺️ Street
+            </button>
+            <button
+              onClick={() => setMapTheme('dark')}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'dark' ? '#2563eb' : 'transparent', color: mapTheme === 'dark' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              🌙 Dark
             </button>
             <button
               onClick={() => setMapTheme('satellite')}
@@ -295,7 +292,6 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           key={mapTheme}
           attribution={tileSources[mapTheme].attr}
           url={tileSources[mapTheme].url}
-          className={tileSources[mapTheme].className || ''}
           maxNativeZoom={18}
           maxZoom={21}
         />
