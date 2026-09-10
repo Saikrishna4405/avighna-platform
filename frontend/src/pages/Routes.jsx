@@ -122,7 +122,7 @@ const filterLocalMatches = (query) => {
   const valRaw = query.trim().toLowerCase();
   const valNorm = normalizeSearchTerm(query);
 
-  return indianCitiesDatabase.filter(item => {
+  const matches = indianCitiesDatabase.filter(item => {
     if (item.display_name.toLowerCase().includes(valRaw)) return true;
     if (valNorm.length >= 2 && normalizeSearchTerm(item.display_name).includes(valNorm)) return true;
     if (item.aliases && item.aliases.some(alias => 
@@ -130,6 +130,56 @@ const filterLocalMatches = (query) => {
     )) return true;
     return false;
   });
+
+  return [
+    ...matches,
+    {
+      display_name: `📍 Search "${query.trim()}" on Map`,
+      isCustomFallback: true,
+      rawQuery: query.trim()
+    }
+  ];
+};
+
+const geocodeLocationQuery = async (query, defaultLat = 26.1445, defaultLon = 91.7362) => {
+  if (!query || !query.trim()) return { lat: defaultLat, lon: defaultLon };
+  const valTrim = query.trim();
+
+  // Step 1: Check local database matches
+  const localMatches = filterLocalMatches(valTrim).filter(m => !m.isCustomFallback);
+  if (localMatches.length > 0 && localMatches[0].lat && localMatches[0].lon) {
+    return { lat: parseFloat(localMatches[0].lat), lon: parseFloat(localMatches[0].lon) };
+  }
+
+  // Step 2: Try Photon Geocoding API (universal coverage for every village, mandal & town)
+  try {
+    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(valTrim)}&limit=1`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.features && data.features.length > 0) {
+        const coords = data.features[0].geometry.coordinates;
+        return { lat: coords[1], lon: coords[0] };
+      }
+    }
+  } catch (e) {
+    console.warn('Photon geocode fallback:', e);
+  }
+
+  // Step 3: Try Nominatim API
+  try {
+    const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(valTrim)}`);
+    if (nomRes.ok) {
+      const nomData = await nomRes.json();
+      if (Array.isArray(nomData) && nomData.length > 0) {
+        return { lat: parseFloat(nomData[0].lat), lon: parseFloat(nomData[0].lon) };
+      }
+    }
+  } catch (e) {
+    console.warn('Nominatim geocode fallback:', e);
+  }
+
+  // Step 4: Default fallback coordinates
+  return { lat: defaultLat, lon: defaultLon };
 };
 
 export const Routes = ({ onLocationChange }) => {
@@ -208,7 +258,7 @@ export const Routes = ({ onLocationChange }) => {
 
             const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
             const filteredOnline = onlineResults.filter(d => !existingNames.has(d.display_name.toLowerCase()));
-            const combined = [...localMatches, ...filteredOnline];
+            const combined = [...localMatches.filter(m => !m.isCustomFallback), ...filteredOnline, ...localMatches.filter(m => m.isCustomFallback)];
             setOriginSuggestions(combined);
             setShowOriginMenu(true);
           }
@@ -222,7 +272,7 @@ export const Routes = ({ onLocationChange }) => {
             if (Array.isArray(nomData) && nomData.length > 0) {
               const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
               const filteredNom = nomData.filter(d => !existingNames.has(d.display_name.toLowerCase()));
-              setOriginSuggestions([...localMatches, ...filteredNom]);
+              setOriginSuggestions([...localMatches.filter(m => !m.isCustomFallback), ...filteredNom, ...localMatches.filter(m => m.isCustomFallback)]);
               setShowOriginMenu(true);
             }
           }
@@ -270,7 +320,7 @@ export const Routes = ({ onLocationChange }) => {
 
             const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
             const filteredOnline = onlineResults.filter(d => !existingNames.has(d.display_name.toLowerCase()));
-            const combined = [...localMatches, ...filteredOnline];
+            const combined = [...localMatches.filter(m => !m.isCustomFallback), ...filteredOnline, ...localMatches.filter(m => m.isCustomFallback)];
             setDestSuggestions(combined);
             setShowDestMenu(true);
           }
@@ -284,7 +334,7 @@ export const Routes = ({ onLocationChange }) => {
             if (Array.isArray(nomData) && nomData.length > 0) {
               const existingNames = new Set(localMatches.map(m => m.display_name.toLowerCase()));
               const filteredNom = nomData.filter(d => !existingNames.has(d.display_name.toLowerCase()));
-              setDestSuggestions([...localMatches, ...filteredNom]);
+              setDestSuggestions([...localMatches.filter(m => !m.isCustomFallback), ...filteredNom, ...localMatches.filter(m => m.isCustomFallback)]);
               setShowDestMenu(true);
             }
           }
@@ -295,7 +345,20 @@ export const Routes = ({ onLocationChange }) => {
     }
   };
 
-  const selectOrigin = (item) => {
+  const selectOrigin = async (item) => {
+    if (item.isCustomFallback) {
+      const q = item.rawQuery;
+      setOriginName(q);
+      setShowOriginMenu(false);
+      setSearchingOrigin(true);
+      const coords = await geocodeLocationQuery(q, 26.1445, 91.7362);
+      setOriginCoords(coords);
+      setOriginCoordsConfirmed(true);
+      setSearchingOrigin(false);
+      if (onLocationChange) onLocationChange(q);
+      return;
+    }
+
     const shortName = item.display_name ? item.display_name.split(',')[0] : 'Origin';
     setOriginName(shortName);
     if (item.lat && item.lon) {
@@ -308,7 +371,19 @@ export const Routes = ({ onLocationChange }) => {
     if (onLocationChange) onLocationChange(shortName);
   };
 
-  const selectDest = (item) => {
+  const selectDest = async (item) => {
+    if (item.isCustomFallback) {
+      const q = item.rawQuery;
+      setDestName(q);
+      setShowDestMenu(false);
+      setSearchingDest(true);
+      const coords = await geocodeLocationQuery(q, 25.5788, 91.8933);
+      setDestCoords(coords);
+      setDestCoordsConfirmed(true);
+      setSearchingDest(false);
+      return;
+    }
+
     const shortName = item.display_name ? item.display_name.split(',')[0] : 'Destination';
     setDestName(shortName);
     if (item.lat && item.lon) {
@@ -334,38 +409,20 @@ export const Routes = ({ onLocationChange }) => {
 
       // Geocode Origin if coordinates not confirmed or invalid
       if (!originCoordsConfirmed || !startLat || !startLon) {
-        try {
-          const origRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(originName)}`);
-          if (origRes.ok) {
-            const origData = await origRes.json();
-            if (Array.isArray(origData) && origData.length > 0) {
-              startLat = parseFloat(origData[0].lat);
-              startLon = parseFloat(origData[0].lon);
-              setOriginCoords({ lat: startLat, lon: startLon });
-              setOriginCoordsConfirmed(true);
-            }
-          }
-        } catch (e) {
-          console.warn('Origin lookup error:', e);
-        }
+        const coords = await geocodeLocationQuery(originName, 26.1445, 91.7362);
+        startLat = coords.lat;
+        startLon = coords.lon;
+        setOriginCoords(coords);
+        setOriginCoordsConfirmed(true);
       }
 
       // Geocode Destination if coordinates not confirmed or invalid
       if (!destCoordsConfirmed || !endLat || !endLon) {
-        try {
-          const destRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(destName)}`);
-          if (destRes.ok) {
-            const destData = await destRes.json();
-            if (Array.isArray(destData) && destData.length > 0) {
-              endLat = parseFloat(destData[0].lat);
-              endLon = parseFloat(destData[0].lon);
-              setDestCoords({ lat: endLat, lon: endLon });
-              setDestCoordsConfirmed(true);
-            }
-          }
-        } catch (e) {
-          console.warn('Destination lookup error:', e);
-        }
+        const coords = await geocodeLocationQuery(destName, 25.5788, 91.8933);
+        endLat = coords.lat;
+        endLon = coords.lon;
+        setDestCoords(coords);
+        setDestCoordsConfirmed(true);
       }
 
       if (!startLat || !startLon || !endLat || !endLon) {
