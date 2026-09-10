@@ -183,8 +183,8 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
 
   const tileSources = {
     dark: {
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-      attr: '&copy; Esri Canvas Dark'
+      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{y}/{x}{r}.png',
+      attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
     },
     street: {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png',
