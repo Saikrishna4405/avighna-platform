@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Polygon, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Search, Navigation, MapPin, Loader2 } from 'lucide-react';
+import { Search, Navigation, MapPin, Loader2, Layers, AlertTriangle, Truck, ShieldAlert } from 'lucide-react';
 
 // Custom Marker Icons
 const vehicleIcon = L.divIcon({
@@ -16,6 +16,13 @@ const incidentIcon = L.divIcon({
   html: `<div style="background:#ef4444; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:13px; border:2px solid white; box-shadow:0 0 12px rgba(239,68,68,0.9);">⚠️</div>`,
   iconSize: [28, 28],
   iconAnchor: [14, 14]
+});
+
+const roadBlockIcon = L.divIcon({
+  className: 'custom-roadblock-marker',
+  html: `<div style="background:#dc2626; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:14px; border:2px solid white; box-shadow:0 0 16px rgba(220,38,38,1.0); font-weight:bold;">⛔</div>`,
+  iconSize: [30, 30],
+  iconAnchor: [15, 15]
 });
 
 const userIcon = L.divIcon({
@@ -59,6 +66,45 @@ const cityCoordsMap = {
   'East Sikkim': [27.3389, 88.6065]
 };
 
+// Regional State Boundary Geometries (Polygons)
+const regionalBoundaries = [
+  {
+    name: 'Assam Logistics Corridor',
+    color: '#38bdf8',
+    coords: [
+      [26.8, 89.8], [27.9, 95.8], [27.0, 96.0], [24.8, 92.8], [26.0, 89.8]
+    ]
+  },
+  {
+    name: 'Meghalaya Highland Sector',
+    color: '#f59e0b',
+    coords: [
+      [25.9, 89.8], [26.1, 92.8], [25.1, 92.7], [25.0, 89.9]
+    ]
+  },
+  {
+    name: 'Nagaland Eastern Border Sector',
+    color: '#a855f7',
+    coords: [
+      [27.0, 94.0], [27.1, 95.3], [25.6, 94.7], [25.4, 93.3]
+    ]
+  },
+  {
+    name: 'Arunachal Frontier Sector',
+    color: '#10b981',
+    coords: [
+      [27.0, 91.5], [29.3, 97.4], [27.8, 97.0], [26.9, 93.5]
+    ]
+  },
+  {
+    name: 'Manipur Southern Sector',
+    color: '#ec4899',
+    coords: [
+      [25.7, 93.0], [25.6, 94.7], [23.8, 94.5], [24.2, 93.0]
+    ]
+  }
+];
+
 export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles = [], userLocation = null, mapCenter = null, onLocationChange }) => {
   const defaultCenter = [25.90, 91.88];
   const defaultZoom = 8;
@@ -69,6 +115,13 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
   const [activeCenter, setActiveCenter] = useState(null);
   const [locatingDevice, setLocatingDevice] = useState(false);
   const [deviceLoc, setDeviceLoc] = useState(userLocation);
+
+  // Map layer toggle states
+  const [showCorridors, setShowCorridors] = useState(true);
+  const [showRoadblocks, setShowRoadblocks] = useState(true);
+  const [showHazards, setShowHazards] = useState(true);
+  const [showFleet, setShowFleet] = useState(true);
+  const [showBoundaries, setShowBoundaries] = useState(true);
 
   useEffect(() => {
     if (activeDistrict && activeDistrict !== 'all') {
@@ -98,7 +151,6 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
     if (!searchQuery.trim()) return;
     setSearching(true);
     try {
-      // Query OpenStreetMap Nominatim free geocoding service
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery + ', India')}`);
       const data = await res.json();
 
@@ -144,7 +196,6 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
           const loc = [lat, lon];
-          // Pin user location on Leaflet map and update active sector across app
           setDeviceLoc(loc);
           setActiveCenter(loc);
           setLocatingDevice(false);
@@ -204,19 +255,24 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
     }
   };
 
+  // Count active blocked roads
+  const blockedRoadsCount = roadsGeoJSON?.features ? roadsGeoJSON.features.filter(f => f.properties?.accessibility_status === 'BLOCKED' || f.properties?.risk_score >= 70).length : 0;
+
   return (
-    <div className="map-container" style={{ width: '100%', height: '560px', minHeight: '500px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #334155', position: 'relative' }}>
+    <div className="map-container" style={{ width: '100%', height: '580px', minHeight: '500px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #334155', position: 'relative' }}>
       
-      {/* OVERLAY SEARCH & THEME BAR */}
+      {/* OVERLAY CONTROLS BAR */}
       <div style={{ position: 'absolute', top: '12px', left: '60px', right: '12px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px', pointerEvents: 'none' }}>
-        <div style={{ display: 'flex', gap: '8px', pointerEvents: 'auto', background: 'rgba(15, 23, 42, 0.92)', backdropFilter: 'blur(8px)', padding: '6px 12px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 8px 16px rgba(0,0,0,0.4)', alignItems: 'center' }}>
-          <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', flex: 1, gap: '8px' }}>
+        
+        {/* ROW 1: SEARCH & THEME SELECTOR */}
+        <div style={{ display: 'flex', gap: '8px', pointerEvents: 'auto', background: 'rgba(15, 23, 42, 0.94)', backdropFilter: 'blur(10px)', padding: '6px 12px', borderRadius: '8px', border: '1px solid #334155', boxShadow: '0 8px 16px rgba(0,0,0,0.4)', alignItems: 'center', flexWrap: 'wrap' }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: '220px', gap: '8px' }}>
             <Search size={16} color="#38bdf8" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search any place in NE India (e.g. Shillong, Guwahati, Kohima, Silchar)..."
+              placeholder="Search any city/mandal in India (e.g. Shillong, Guwahati, Kohima)..."
               style={{ flex: 1, background: 'transparent', border: 'none', color: '#f8fafc', fontSize: '0.85rem', outline: 'none' }}
             />
             <button type="submit" disabled={searching} style={{ background: '#2563eb', border: 'none', color: '#fff', padding: '5px 12px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -263,6 +319,48 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           </button>
         </div>
 
+        {/* ROW 2: INTERACTIVE GIS LAYER TOGGLES */}
+        <div style={{ display: 'flex', gap: '6px', pointerEvents: 'auto', overflowX: 'auto', background: 'rgba(15, 23, 42, 0.90)', backdropFilter: 'blur(8px)', padding: '4px 10px', borderRadius: '6px', border: '1px solid #334155', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Layers size={12} color="#38bdf8" /> Layers:
+          </span>
+          
+          <button
+            onClick={() => setShowCorridors(!showCorridors)}
+            style={{ background: showCorridors ? 'rgba(37, 99, 235, 0.3)' : 'transparent', border: `1px solid ${showCorridors ? '#2563eb' : '#475569'}`, color: showCorridors ? '#60a5fa' : '#94a3b8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            🛣️ Corridors
+          </button>
+          
+          <button
+            onClick={() => setShowRoadblocks(!showRoadblocks)}
+            style={{ background: showRoadblocks ? 'rgba(220, 38, 38, 0.3)' : 'transparent', border: `1px solid ${showRoadblocks ? '#dc2626' : '#475569'}`, color: showRoadblocks ? '#f87171' : '#94a3b8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            ⛔ Road Blocks ({blockedRoadsCount})
+          </button>
+
+          <button
+            onClick={() => setShowHazards(!showHazards)}
+            style={{ background: showHazards ? 'rgba(217, 119, 6, 0.3)' : 'transparent', border: `1px solid ${showHazards ? '#d97706' : '#475569'}`, color: showHazards ? '#fbbf24' : '#94a3b8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            ⚠️ Field Hazards ({incidents.length})
+          </button>
+
+          <button
+            onClick={() => setShowFleet(!showFleet)}
+            style={{ background: showFleet ? 'rgba(16, 185, 129, 0.3)' : 'transparent', border: `1px solid ${showFleet ? '#10b981' : '#475569'}`, color: showFleet ? '#34d399' : '#94a3b8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            🚛 Relief Fleet ({vehicles.length})
+          </button>
+
+          <button
+            onClick={() => setShowBoundaries(!showBoundaries)}
+            style={{ background: showBoundaries ? 'rgba(147, 51, 234, 0.3)' : 'transparent', border: `1px solid ${showBoundaries ? '#9333ea' : '#475569'}`, color: showBoundaries ? '#c084fc' : '#94a3b8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            🗺️ Boundaries
+          </button>
+        </div>
+
         {/* Quick Location Pills */}
         <div style={{ display: 'flex', gap: '6px', pointerEvents: 'auto', overflowX: 'auto', paddingBottom: '4px' }}>
           <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, alignSelf: 'center', background: 'rgba(15,23,42,0.85)', padding: '2px 6px', borderRadius: '4px' }}>Quick Jump:</span>
@@ -301,7 +399,7 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
       <MapContainer center={defaultCenter} zoom={defaultZoom} scrollWheelZoom={true} style={{ width: '100%', height: '100%', minHeight: '500px', borderRadius: '12px' }}>
         <MapRecenter center={activeCenter} />
 
-        {/* Selected Dynamic Base Map Layer (100% Free, No API Key Required) */}
+        {/* Selected Dynamic Base Map Layer */}
         <TileLayer
           key={mapTheme}
           attribution={tileSources[mapTheme].attr}
@@ -311,21 +409,46 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           maxZoom={21}
         />
 
+        {/* Render Regional Administrative Sector Boundaries */}
+        {showBoundaries && regionalBoundaries.map((b, i) => (
+          <Polygon
+            key={i}
+            positions={b.coords}
+            pathOptions={{
+              color: b.color,
+              fillColor: b.color,
+              fillOpacity: 0.06,
+              weight: 2,
+              dashArray: '5, 5'
+            }}
+          >
+            <Popup>
+              <div style={{ color: '#0f172a', padding: '4px' }}>
+                <h4 style={{ margin: 0, color: b.color }}>🗺️ {b.name}</h4>
+                <p style={{ margin: '4px 0', fontSize: '0.8rem' }}>
+                  Regional Logistics Sector Administrative Border
+                </p>
+              </div>
+            </Popup>
+          </Polygon>
+        ))}
 
-        {/* Render Road Network Corridors with High-Contrast Outer Outlines */}
-        {roadsGeoJSON && roadsGeoJSON.features && roadsGeoJSON.features.map((feature, idx) => {
+        {/* Render Road Network Corridors */}
+        {showCorridors && roadsGeoJSON && roadsGeoJSON.features && roadsGeoJSON.features.map((feature, idx) => {
           const props = feature.properties;
           const coords = feature.geometry.coordinates.map(c => [c[1], c[0]]);
           const color = getRoadColor(props.accessibility_status, props.risk_score);
+          const isBlocked = props.accessibility_status === 'BLOCKED' || props.risk_score >= 70;
+          const midpoint = coords[Math.floor(coords.length / 2)];
 
           return (
             <React.Fragment key={props.road_id || idx}>
-              {/* Outer Dark Stroke for High Contrast */}
+              {/* Outer Contrast Outline */}
               <Polyline
                 positions={coords}
                 pathOptions={{
                   color: '#000000',
-                  weight: props.accessibility_status === 'BLOCKED' ? 8 : 6,
+                  weight: isBlocked ? 8 : 6,
                   opacity: 0.9
                 }}
               />
@@ -334,8 +457,8 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
                 positions={coords}
                 pathOptions={{
                   color: color,
-                  weight: props.accessibility_status === 'BLOCKED' ? 5 : 3.5,
-                  dashArray: props.accessibility_status === 'BLOCKED' ? '8, 8' : null,
+                  weight: isBlocked ? 5 : 3.5,
+                  dashArray: isBlocked ? '8, 8' : null,
                   opacity: 1.0
                 }}
               >
@@ -352,18 +475,35 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
                   </div>
                 </Popup>
               </Polyline>
+
+              {/* Road Block Restriction Marker on Midpoint */}
+              {showRoadblocks && isBlocked && midpoint && (
+                <Marker position={midpoint} icon={roadBlockIcon}>
+                  <Popup>
+                    <div style={{ color: '#0f172a', padding: '4px' }}>
+                      <h4 style={{ margin: 0, color: '#dc2626' }}>⛔ ROAD CLOSED / BLOCKED RESTRICTION</h4>
+                      <p style={{ margin: '4px 0', fontSize: '0.85rem', fontWeight: 700 }}>{props.road_name} ({props.road_code})</p>
+                      <p style={{ margin: '4px 0', fontSize: '0.8rem', color: '#dc2626' }}>
+                        Passage Impassable | Risk Level: <strong>{props.risk_score}/100</strong>
+                      </p>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>
+                        Automated Rerouting Active: Relief trucks are automatically safely bypassed around this segment.
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
             </React.Fragment>
           );
         })}
 
-        {/* Render Active Incident Hazard Points with Impact Danger Buffer Circles */}
-        {incidents.map((inc) => {
+        {/* Render Active Incident Hazard Buffer Circles & Central Hazard Markers */}
+        {showHazards && incidents.map((inc) => {
           const radiusMeters = inc.severity === 'CRITICAL' ? 10000 : inc.severity === 'HIGH' ? 6000 : 3500;
           const circleColor = inc.severity === 'CRITICAL' ? '#ef4444' : inc.severity === 'HIGH' ? '#f59e0b' : '#3b82f6';
 
           return (
             <React.Fragment key={inc.id}>
-              {/* Radial Danger Buffer Circle */}
               <Circle
                 center={[inc.latitude, inc.longitude]}
                 radius={radiusMeters}
@@ -388,11 +528,10 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
                 </Popup>
               </Circle>
 
-              {/* Central Hazard Marker */}
               <Marker position={[inc.latitude, inc.longitude]} icon={incidentIcon}>
                 <Popup>
                   <div style={{ color: '#0f172a', padding: '4px' }}>
-                    <h4 style={{ margin: 0, color: '#dc2626' }}>{inc.incident_type} ({inc.severity})</h4>
+                    <h4 style={{ margin: 0, color: '#dc2626' }}>⚠️ {inc.incident_type} ({inc.severity})</h4>
                     <p style={{ margin: '4px 0', fontSize: '0.8rem' }}>{inc.description}</p>
                     <p style={{ margin: '4px 0', fontSize: '0.75rem', color: '#475569' }}>
                       Verification: <strong>{inc.verification_status}</strong>
@@ -405,11 +544,11 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
         })}
 
         {/* Render Fleet Vehicles (Live GPS Markers) */}
-        {vehicles.map((v) => (
+        {showFleet && vehicles.map((v) => (
           <Marker key={v.id} position={[v.latitude, v.longitude]} icon={vehicleIcon}>
             <Popup>
               <div style={{ color: '#0f172a', padding: '4px' }}>
-                <h4 style={{ margin: 0, color: '#2563eb' }}>Vehicle: {v.vehicle_number}</h4>
+                <h4 style={{ margin: 0, color: '#2563eb' }}>🚛 Vehicle: {v.vehicle_number}</h4>
                 <p style={{ margin: '4px 0', fontSize: '0.8rem' }}>Cargo: <strong>{v.cargo_type}</strong> ({v.priority})</p>
                 <p style={{ margin: '4px 0', fontSize: '0.8rem' }}>
                   Status: <span style={{ fontWeight: 700, color: v.status==='REROUTED'?'#d97706':'#059669' }}>{v.status}</span>
@@ -454,7 +593,8 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
             </Popup>
           </Marker>
         )}
-        {/* Render Active Sector Focus Outer Boundary Circle (15 km Sector Coverage) */}
+
+        {/* Render Active Sector Outer Focus Boundary Circle */}
         {activeDistrict && activeCenter && (
           <Circle
             center={activeCenter}
@@ -481,8 +621,28 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           </Circle>
         )}
       </MapContainer>
+
+      {/* FLOATING HUD METRICS SUMMARY CARD (BOTTOM RIGHT) */}
+      <div style={{ position: 'absolute', bottom: '16px', right: '16px', zIndex: 1000, background: 'rgba(15, 23, 42, 0.92)', backdropFilter: 'blur(10px)', border: '1px solid #334155', borderRadius: '8px', padding: '8px 12px', display: 'flex', gap: '14px', alignItems: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <ShieldAlert size={14} color="#ef4444" />
+          <span style={{ fontSize: '0.75rem', color: '#f8fafc', fontWeight: 600 }}>
+            Blocked: <strong style={{ color: '#ef4444' }}>{blockedRoadsCount}</strong>
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <AlertTriangle size={14} color="#f59e0b" />
+          <span style={{ fontSize: '0.75rem', color: '#f8fafc', fontWeight: 600 }}>
+            Hazards: <strong style={{ color: '#f59e0b' }}>{incidents.length}</strong>
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Truck size={14} color="#34d399" />
+          <span style={{ fontSize: '0.75rem', color: '#f8fafc', fontWeight: 600 }}>
+            Fleet: <strong style={{ color: '#34d399' }}>{vehicles.length}</strong>
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
-
-
