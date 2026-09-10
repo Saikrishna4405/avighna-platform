@@ -179,20 +179,28 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
     return '#10b981';
   };
 
-  const [mapTheme, setMapTheme] = useState('street'); // 'street', 'dark', 'satellite'
+  const [mapTheme, setMapTheme] = useState('google'); // 'google', 'hybrid', 'satellite', 'dark'
 
   const tileSources = {
-    street: {
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png',
-      attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    google: {
+      url: 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attr: '&copy; Google Maps'
+    },
+    hybrid: {
+      url: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attr: '&copy; Google Maps Hybrid'
+    },
+    satellite: {
+      url: 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attr: '&copy; Google Maps Satellite'
     },
     dark: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-      attr: '&copy; Esri, DeLorme, NAVTEQ'
-    },
-    satellite: {
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attr: '&copy; Esri World Imagery'
+      subdomains: ['a', 'b', 'c'],
+      attr: '&copy; Esri Dark Gray'
     }
   };
 
@@ -219,22 +227,28 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           {/* Map Layer Theme Buttons */}
           <div style={{ display: 'flex', background: '#0f172a', borderRadius: '6px', padding: '2px', border: '1px solid #334155' }}>
             <button
-              onClick={() => setMapTheme('street')}
-              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'street' ? '#2563eb' : 'transparent', color: mapTheme === 'street' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+              onClick={() => setMapTheme('google')}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'google' ? '#2563eb' : 'transparent', color: mapTheme === 'google' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
             >
-              🗺️ Street
+              🗺️ Google Maps
             </button>
             <button
-              onClick={() => setMapTheme('dark')}
-              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'dark' ? '#2563eb' : 'transparent', color: mapTheme === 'dark' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+              onClick={() => setMapTheme('hybrid')}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'hybrid' ? '#2563eb' : 'transparent', color: mapTheme === 'hybrid' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
             >
-              🌙 Dark
+              🏷️ Hybrid
             </button>
             <button
               onClick={() => setMapTheme('satellite')}
               style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'satellite' ? '#2563eb' : 'transparent', color: mapTheme === 'satellite' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
             >
               🛰️ Satellite
+            </button>
+            <button
+              onClick={() => setMapTheme('dark')}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'dark' ? '#2563eb' : 'transparent', color: mapTheme === 'dark' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              🌙 Dark
             </button>
           </div>
 
@@ -292,7 +306,8 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           key={mapTheme}
           attribution={tileSources[mapTheme].attr}
           url={tileSources[mapTheme].url}
-          maxNativeZoom={18}
+          subdomains={tileSources[mapTheme].subdomains || ['mt0', 'mt1', 'mt2', 'mt3']}
+          maxNativeZoom={20}
           maxZoom={21}
         />
 

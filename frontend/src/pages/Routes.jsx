@@ -498,11 +498,13 @@ export const Routes = ({ onLocationChange }) => {
           <MapContainer center={[originCoords.lat, originCoords.lon]} zoom={9} scrollWheelZoom={true} style={{ width: '100%', height: '100%' }}>
             <RouteBoundsFitter polylineCoords={result.geometry} />
 
-            {/* OpenStreetMap Standard Tiles */}
+            {/* Google Maps Standard Roadmap Tiles */}
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png"
-              maxZoom={19}
+              attribution='&copy; Google Maps'
+              url="https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+              subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+              maxNativeZoom={20}
+              maxZoom={21}
             />
 
             {/* Recommended Route Outer & Inner Polyline */}
