@@ -50,51 +50,82 @@ function RouteBoundsFitter({ polylineCoords }) {
   return null;
 }
 
+const normalizeSearchTerm = (str) => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/th/g, 't')
+    .replace(/ph/g, 'p')
+    .replace(/ee/g, 'i')
+    .replace(/oo/g, 'u')
+    .replace(/dh/g, 'd')
+    .replace(/bh/g, 'b')
+    .replace(/gh/g, 'g')
+    .replace(/kh/g, 'k')
+    .replace(/sh/g, 's')
+    .replace(/[^a-z0-9]/g, '');
+};
+
 const indianCitiesDatabase = [
-  { display_name: 'Guwahati, Kamrup Metropolitan, Assam', lat: 26.1445, lon: 91.7362 },
-  { display_name: 'Shillong, East Khasi Hills, Meghalaya', lat: 25.5788, lon: 91.8933 },
-  { display_name: 'Silchar, Cachar, Assam', lat: 24.8333, lon: 92.7789 },
-  { display_name: 'Kohima, Kohima District, Nagaland', lat: 25.6747, lon: 94.1100 },
-  { display_name: 'Dimapur, Nagaland', lat: 25.9060, lon: 93.7270 },
-  { display_name: 'Itanagar, Papum Pare, Arunachal Pradesh', lat: 27.0844, lon: 93.6053 },
-  { display_name: 'Imphal, Imphal West, Manipur', lat: 24.8170, lon: 93.9368 },
-  { display_name: 'Aizawl, Mizoram', lat: 23.7307, lon: 92.7173 },
-  { display_name: 'Agartala, West Tripura, Tripura', lat: 23.8315, lon: 91.2868 },
-  { display_name: 'Gangtok, East Sikkim, Sikkim', lat: 27.3389, lon: 88.6065 },
-  { display_name: 'Hyderabad, Telangana', lat: 17.3850, lon: 78.4867 },
-  { display_name: 'Serilingampalle Mandal, Ranga Reddy, Telangana', lat: 17.4833, lon: 78.3158 },
-  { display_name: 'Mahabubnagar, Telangana', lat: 16.7488, lon: 78.0035 },
-  { display_name: 'Mahadevpura, Bengaluru, Karnataka', lat: 12.9922, lon: 77.6968 },
-  { display_name: 'Mahape, Navi Mumbai, Maharashtra', lat: 19.1172, lon: 73.0163 },
-  { display_name: 'Thiruvananthapuram, Kerala', lat: 8.5241, lon: 76.9366 },
-  { display_name: 'Tiruchirappalli, Tamil Nadu', lat: 10.7905, lon: 78.7047 },
-  { display_name: 'Tirupati, Andhra Pradesh', lat: 13.6288, lon: 79.4192 },
-  { display_name: 'Tiruppur, Tamil Nadu', lat: 11.1085, lon: 77.3411 },
-  { display_name: 'Thane, Maharashtra', lat: 19.2183, lon: 72.9781 },
-  { display_name: 'Thrissur, Kerala', lat: 10.5276, lon: 76.2144 },
-  { display_name: 'Tezpur, Sonitpur, Assam', lat: 26.6338, lon: 92.8006 },
-  { display_name: 'Jorhat, Assam', lat: 26.7509, lon: 94.2037 },
-  { display_name: 'Dibrugarh, Assam', lat: 27.4728, lon: 94.9120 },
-  { display_name: 'Tura, West Garo Hills, Meghalaya', lat: 25.5141, lon: 90.2032 },
-  { display_name: 'Delhi, NCT of Delhi', lat: 28.6139, lon: 77.2090 },
-  { display_name: 'Mumbai, Maharashtra', lat: 19.0760, lon: 72.8777 },
-  { display_name: 'Bengaluru, Karnataka', lat: 12.9716, lon: 77.5946 },
-  { display_name: 'Kolkata, West Bengal', lat: 22.5726, lon: 88.3639 },
-  { display_name: 'Chennai, Tamil Nadu', lat: 13.0827, lon: 80.2707 },
-  { display_name: 'Pune, Maharashtra', lat: 18.5204, lon: 73.8567 },
-  { display_name: 'Ahmedabad, Gujarat', lat: 23.0225, lon: 72.5714 },
-  { display_name: 'Jaipur, Rajasthan', lat: 26.9124, lon: 75.7873 },
-  { display_name: 'Lucknow, Uttar Pradesh', lat: 26.8467, lon: 80.9462 },
-  { display_name: 'Patna, Bihar', lat: 25.5941, lon: 85.1376 },
-  { display_name: 'Bhubaneswar, Odisha', lat: 20.2961, lon: 85.8245 },
-  { display_name: 'Ranchi, Jharkhand', lat: 23.3441, lon: 85.3096 },
-  { display_name: 'Raipur, Chhattisgarh', lat: 21.2514, lon: 81.6296 },
-  { display_name: 'Bhopal, Madhya Pradesh', lat: 23.2599, lon: 77.4126 },
-  { display_name: 'Chandigarh, Punjab', lat: 30.7333, lon: 76.7794 },
-  { display_name: 'Dehradun, Uttarakhand', lat: 30.3165, lon: 78.0322 },
-  { display_name: 'Shimla, Himachal Pradesh', lat: 31.1048, lon: 77.1734 },
-  { display_name: 'Srinagar, Jammu and Kashmir', lat: 34.0837, lon: 74.7973 }
+  { display_name: 'Guwahati (గౌహతి), Kamrup Metropolitan, Assam', aliases: ['guwahati', 'gauhati', 'గౌహతి', 'kamrup'], lat: 26.1445, lon: 91.7362 },
+  { display_name: 'Shillong (షిలాంగ్), East Khasi Hills, Meghalaya', aliases: ['shillong', 'silong', 'షిలాంగ్'], lat: 25.5788, lon: 91.8933 },
+  { display_name: 'Tirupati (Thirupathi / Tirupathi / తిరుపతి), Andhra Pradesh', aliases: ['tirupati', 'thirupathi', 'tirupathi', 'thirupati', 'తిరుపతి'], lat: 13.6288, lon: 79.4192 },
+  { display_name: 'Mahadevpur (Mahadevpura / Mahadevpuram / మహాదేవ్‌పూర్), Telangana', aliases: ['mahadevpur', 'mahadevpura', 'mahadevpuram', 'మహాదేవ్‌పూర్', 'మహాదేవపూర్'], lat: 18.6657, lon: 79.9142 },
+  { display_name: 'Hyderabad (హైదరాబాద్), Telangana', aliases: ['hyderabad', 'హైదరాబాద్', 'hyd', 'secunderabad'], lat: 17.3850, lon: 78.4867 },
+  { display_name: 'Serilingampalle (శేరిలింగంపల్లి), Ranga Reddy, Telangana', aliases: ['serilingampalle', 'serilingampally', 'శేరిలింగంపల్లి', 'lingampally'], lat: 17.4833, lon: 78.3158 },
+  { display_name: 'Mahabubnagar (మహబూబ్‌నగర్), Telangana', aliases: ['mahabubnagar', 'mahboobnagar', 'మహబూబ్‌నగర్'], lat: 16.7488, lon: 78.0035 },
+  { display_name: 'Silchar, Cachar, Assam', aliases: ['silchar', 'cachar'], lat: 24.8333, lon: 92.7789 },
+  { display_name: 'Kohima, Nagaland', aliases: ['kohima'], lat: 25.6747, lon: 94.1100 },
+  { display_name: 'Dimapur, Nagaland', aliases: ['dimapur'], lat: 25.9060, lon: 93.7270 },
+  { display_name: 'Itanagar, Arunachal Pradesh', aliases: ['itanagar'], lat: 27.0844, lon: 93.6053 },
+  { display_name: 'Imphal, Manipur', aliases: ['imphal'], lat: 24.8170, lon: 93.9368 },
+  { display_name: 'Aizawl, Mizoram', aliases: ['aizawl'], lat: 23.7307, lon: 92.7173 },
+  { display_name: 'Agartala, Tripura', aliases: ['agartala'], lat: 23.8315, lon: 91.2868 },
+  { display_name: 'Gangtok, Sikkim', aliases: ['gangtok'], lat: 27.3389, lon: 88.6065 },
+  { display_name: 'Vijayawada (విజయవాడ), Andhra Pradesh', aliases: ['vijayawada', 'bezawada', 'విజయవాడ'], lat: 16.5062, lon: 80.6480 },
+  { display_name: 'Visakhapatnam (విశాఖపట్నం / Vizag), Andhra Pradesh', aliases: ['visakhapatnam', 'vizag', 'విశాఖపట్నం'], lat: 17.6868, lon: 83.2185 },
+  { display_name: 'Warangal (వరంగల్), Telangana', aliases: ['warangal', 'వరంగల్', 'kazipet'], lat: 17.9689, lon: 79.5941 },
+  { display_name: 'Nizamabad (నిజామాబాద్), Telangana', aliases: ['nizamabad', 'నిజామాబాద్'], lat: 18.6725, lon: 78.0941 },
+  { display_name: 'Karimnagar (కరీంనగర్), Telangana', aliases: ['karimnagar', 'కరీంనగర్'], lat: 18.4386, lon: 79.1288 },
+  { display_name: 'Khammam (ఖమ్మం), Telangana', aliases: ['khammam', 'ఖమ్మం'], lat: 17.2473, lon: 80.1514 },
+  { display_name: 'Nalgonda (నల్గొండ), Telangana', aliases: ['nalgonda', 'నల్గొండ'], lat: 17.0500, lon: 79.2667 },
+  { display_name: 'Kurnool (కర్నూలు), Andhra Pradesh', aliases: ['kurnool', 'కర్నూలు'], lat: 15.8281, lon: 78.0373 },
+  { display_name: 'Anantapur (అనంతపురం), Andhra Pradesh', aliases: ['anantapur', 'anantapurb', 'అనంతపురం'], lat: 14.6819, lon: 77.6006 },
+  { display_name: 'Kadapa (కడప), Andhra Pradesh', aliases: ['kadapa', 'cuddapah', 'కడప'], lat: 14.4673, lon: 78.8242 },
+  { display_name: 'Nellore (నెల్లూరు), Andhra Pradesh', aliases: ['nellore', 'నెల్లూరు'], lat: 14.4426, lon: 79.9865 },
+  { display_name: 'Guntur (గుంటూరు), Andhra Pradesh', aliases: ['guntur', 'గుంటూరు'], lat: 16.3067, lon: 80.4365 },
+  { display_name: 'Rajahmundry (రాజమండ్రి), Andhra Pradesh', aliases: ['rajahmundry', 'rajamahendravaram', 'రాజమండ్రి'], lat: 17.0005, lon: 81.8040 },
+  { display_name: 'Kakinada (కాకినాడ), Andhra Pradesh', aliases: ['kakinada', 'కాకినాడ'], lat: 16.9891, lon: 82.2475 },
+  { display_name: 'Eluru (ఏలూరు), Andhra Pradesh', aliases: ['eluru', 'ఏలూరు'], lat: 16.7107, lon: 81.1035 },
+  { display_name: 'Ongole (ఒంగోలు), Andhra Pradesh', aliases: ['ongole', 'ఒంగోలు'], lat: 15.5057, lon: 80.0499 },
+  { display_name: 'Thiruvananthapuram, Kerala', aliases: ['thiruvananthapuram', 'trivandrum'], lat: 8.5241, lon: 76.9366 },
+  { display_name: 'Tiruchirappalli, Tamil Nadu', aliases: ['tiruchirappalli', 'trichy'], lat: 10.7905, lon: 78.7047 },
+  { display_name: 'Tiruppur, Tamil Nadu', aliases: ['tiruppur', 'tirupur'], lat: 11.1085, lon: 77.3411 },
+  { display_name: 'Thane, Maharashtra', aliases: ['thane'], lat: 19.2183, lon: 72.9781 },
+  { display_name: 'Thrissur, Kerala', aliases: ['thrissur', 'trichur'], lat: 10.5276, lon: 76.2144 },
+  { display_name: 'Delhi, NCT of Delhi', aliases: ['delhi', 'new delhi'], lat: 28.6139, lon: 77.2090 },
+  { display_name: 'Mumbai, Maharashtra', aliases: ['mumbai', 'bombay'], lat: 19.0760, lon: 72.8777 },
+  { display_name: 'Bengaluru, Karnataka', aliases: ['bengaluru', 'bangalore'], lat: 12.9716, lon: 77.5946 },
+  { display_name: 'Kolkata, West Bengal', aliases: ['kolkata', 'calcutta'], lat: 22.5726, lon: 88.3639 },
+  { display_name: 'Chennai, Tamil Nadu', aliases: ['chennai', 'madras'], lat: 13.0827, lon: 80.2707 },
+  { display_name: 'Pune, Maharashtra', aliases: ['pune', 'poona'], lat: 18.5204, lon: 73.8567 },
+  { display_name: 'Ahmedabad, Gujarat', aliases: ['ahmedabad', 'amdavad'], lat: 23.0225, lon: 72.5714 }
 ];
+
+const filterLocalMatches = (query) => {
+  if (!query || !query.trim()) return [];
+  const valRaw = query.trim().toLowerCase();
+  const valNorm = normalizeSearchTerm(query);
+
+  return indianCitiesDatabase.filter(item => {
+    if (item.display_name.toLowerCase().includes(valRaw)) return true;
+    if (valNorm.length >= 2 && normalizeSearchTerm(item.display_name).includes(valNorm)) return true;
+    if (item.aliases && item.aliases.some(alias => 
+      alias.toLowerCase().includes(valRaw) || (valNorm.length >= 2 && normalizeSearchTerm(alias).includes(valNorm))
+    )) return true;
+    return false;
+  });
+};
 
 export const Routes = ({ onLocationChange }) => {
   // Form State
@@ -147,11 +178,7 @@ export const Routes = ({ onLocationChange }) => {
       return;
     }
 
-    const valLower = value.trim().toLowerCase();
-    const localMatches = indianCitiesDatabase.filter(item => 
-      item.display_name.toLowerCase().includes(valLower)
-    );
-
+    const localMatches = filterLocalMatches(value);
     if (localMatches.length > 0) {
       setOriginSuggestions(localMatches);
       setShowOriginMenu(true);
@@ -160,7 +187,7 @@ export const Routes = ({ onLocationChange }) => {
     if (value.trim().length >= 2) {
       setSearchingOrigin(true);
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(value)}`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=te,hi,en&q=${encodeURIComponent(value)}`);
         if (res.ok) {
           const onlineData = await res.json();
           if (Array.isArray(onlineData) && onlineData.length > 0) {
@@ -191,11 +218,7 @@ export const Routes = ({ onLocationChange }) => {
       return;
     }
 
-    const valLower = value.trim().toLowerCase();
-    const localMatches = indianCitiesDatabase.filter(item => 
-      item.display_name.toLowerCase().includes(valLower)
-    );
-
+    const localMatches = filterLocalMatches(value);
     if (localMatches.length > 0) {
       setDestSuggestions(localMatches);
       setShowDestMenu(true);
@@ -204,7 +227,7 @@ export const Routes = ({ onLocationChange }) => {
     if (value.trim().length >= 2) {
       setSearchingDest(true);
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(value)}`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=te,hi,en&q=${encodeURIComponent(value)}`);
         if (res.ok) {
           const onlineData = await res.json();
           if (Array.isArray(onlineData) && onlineData.length > 0) {
