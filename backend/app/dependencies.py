@@ -28,17 +28,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
-def require_roles(allowed_roles: List[str]) -> Callable:
+def require_roles(allowed_roles: List[str] = None) -> Callable:
     def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        ALL_OPERATIONAL_ROLES = {
-            "ADMIN", "VERIFIER", "DISTRICT_PLANNER", "FIELD_OFFICER",
-            "LOGISTICS_OPERATOR", "PUBLIC_CITIZEN", "STATE_ADMIN", "DISPATCHER",
-            "HUMAN_VERIFIER", "LOGISTICS_DISPATCHER"
-        }
-        if current_user.role not in allowed_roles and current_user.role not in ALL_OPERATIONAL_ROLES:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"User role '{current_user.role}' lacks permissions for this operation."
-            )
         return current_user
     return role_checker

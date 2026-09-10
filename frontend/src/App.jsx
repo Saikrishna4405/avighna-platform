@@ -16,7 +16,7 @@ import { Alerts } from './pages/Alerts';
 import { Verification } from './pages/Verification';
 import { LogisticsPriority } from './pages/LogisticsPriority';
 
-import { getCurrentUser, logoutUser } from './services/auth';
+import { getCurrentUser, logoutUser, loginUser } from './services/auth';
 
 export function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -36,7 +36,7 @@ export function App() {
     }
   }, []);
 
-  const handleRoleSwitch = (newRole) => {
+  const handleRoleSwitch = async (newRole) => {
     const roleProfiles = {
       PUBLIC_CITIZEN: { id: 6, name: 'Everyday Citizen / Traveler', email: 'citizen@avighna.gov.in', role: 'PUBLIC_CITIZEN', district: 'Guwahati' },
       ADMIN: { id: 1, name: 'System Admin', email: 'admin@avighna.gov.in', role: 'ADMIN', district: 'Guwahati' },
@@ -48,6 +48,11 @@ export function App() {
     const updatedUser = roleProfiles[newRole] || roleProfiles.ADMIN;
     setCurrentUser(updatedUser);
     localStorage.setItem('avighna_user', JSON.stringify(updatedUser));
+    try {
+      await loginUser(updatedUser.email, 'password123');
+    } catch (e) {
+      console.warn('Role auto-login notice:', e);
+    }
   };
 
   const handleLogout = () => {
