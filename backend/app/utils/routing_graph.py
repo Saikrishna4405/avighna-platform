@@ -142,25 +142,77 @@ def _synthetic_alt_route(primary: Dict[str, Any]) -> Dict[str, Any]:
         "status": "ALTERNATIVE"
     }
 
-def _dummy_fallback_route(orig: str, dest: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+CITY_COORDS = {
+    "guwahati": (26.1445, 91.7362),
+    "shillong": (25.5788, 91.8933),
+    "silchar": (24.8333, 92.7789),
+    "kohima": (25.6747, 94.1100),
+    "dimapur": (25.9060, 93.7270),
+    "itanagar": (27.0844, 93.6053),
+    "imphal": (24.8170, 93.9368),
+    "aizawl": (23.7307, 92.7173),
+    "gangtok": (27.3389, 88.6065),
+    "mumbai": (19.0760, 72.8777),
+    "delhi": (28.6139, 77.2090),
+    "hyderabad": (17.3850, 78.4867),
+    "chennai": (13.0827, 80.2707),
+    "bengaluru": (12.9716, 77.5946),
+    "kolkata": (22.5726, 88.3639)
+}
+
+def _get_coords_for_name(name: str, default_lat: float, default_lon: float) -> Tuple[float, float]:
+    name_clean = str(name).lower().strip()
+    for k, coords in CITY_COORDS.items():
+        if k in name_clean:
+            return coords
+    return (default_lat, default_lon)
+
+def _dummy_fallback_route(orig: str, dest: str, orig_lat: float = None, orig_lon: float = None, dest_lat: float = None, dest_lon: float = None) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    o_lat, o_lon = (orig_lat, orig_lon) if (orig_lat and orig_lon) else _get_coords_for_name(orig, 26.1445, 91.7362)
+    d_lat, d_lon = (dest_lat, dest_lon) if (dest_lat and dest_lon) else _get_coords_for_name(dest, 25.5788, 91.8933)
+
+    direct_dist = haversine_distance_km(o_lat, o_lon, d_lat, d_lon)
+    dist_km = round(max(2.0, direct_dist * 1.3), 1)
+    alt_dist = round(dist_km * 1.18, 1)
+
+    speed = 50.0
+    hours = dist_km / speed
+    h = int(hours)
+    m = int((hours - h) * 60)
+    eta_str = f"{h}h {m}m" if h > 0 else f"{m} mins"
+
+    alt_hours = alt_dist / (speed * 0.85)
+    ah = int(alt_hours)
+    am = int((alt_hours - ah) * 60)
+    alt_eta_str = f"{ah}h {am}m" if ah > 0 else f"{am} mins"
+
+    risk = round(min(65.0, 12.0 + (dist_km * 0.05)), 1)
+    safety = round(100.0 - risk, 1)
+
+    mid_lat = (o_lat + d_lat) / 2.0 + 0.05
+    mid_lon = (o_lon + d_lon) / 2.0 - 0.05
+
+    alt_mid_lat = (o_lat + d_lat) / 2.0 - 0.08
+    alt_mid_lon = (o_lon + d_lon) / 2.0 + 0.08
+
     p = {
-        "route_id": "route_primary_01",
-        "route_name": f"Direct Corridor ({orig} to {dest})",
-        "distance_km": 104.5,
-        "eta": "2h 40m",
-        "risk_score": 28.5,
-        "safety_score": 71.5,
-        "geometry": [[26.14, 91.73], [25.9, 91.8], [25.57, 91.88]],
+        "route_id": f"route_primary_{abs(hash(orig + dest)) % 10000}",
+        "route_name": f"Highway Corridor ({orig} to {dest})",
+        "distance_km": dist_km,
+        "eta": eta_str,
+        "risk_score": risk,
+        "safety_score": safety,
+        "geometry": [[o_lat, o_lon], [mid_lat, mid_lon], [d_lat, d_lon]],
         "status": "RECOMMENDED"
     }
     alt = {
-        "route_id": "route_alt_02",
-        "route_name": f"NH-40 Alternate Highway ({orig} via Western Ridge)",
-        "distance_km": 122.0,
-        "eta": "3h 10m",
-        "risk_score": 18.0,
-        "safety_score": 82.0,
-        "geometry": [[26.14, 91.73], [26.0, 91.5], [25.57, 91.88]],
+        "route_id": f"route_alt_{abs(hash(orig + dest + 'alt')) % 10000}",
+        "route_name": f"Alternate Bypass ({orig} to {dest} Detour)",
+        "distance_km": alt_dist,
+        "eta": alt_eta_str,
+        "risk_score": round(risk * 0.7, 1),
+        "safety_score": round(100.0 - (risk * 0.7), 1),
+        "geometry": [[o_lat, o_lon], [alt_mid_lat, alt_mid_lon], [d_lat, d_lon]],
         "status": "ALTERNATIVE"
     }
     return p, [alt]

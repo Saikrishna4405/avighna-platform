@@ -2,6 +2,15 @@
 
 ---
 
+## 🌐 Live Deployment Status
+
+* **GitHub Repository**: [Saikrishna4405/avighna-platform](https://github.com/Saikrishna4405/avighna-platform)
+* **Live Web App (Vercel)**: [https://avighna-platform.vercel.app](https://avighna-platform.vercel.app/)
+* **Live Backend API (Render)**: [https://avighna-platform.onrender.com](https://avighna-platform.onrender.com/)
+* **Swagger API Docs**: [https://avighna-platform.onrender.com/docs](https://avighna-platform.onrender.com/docs)
+
+---
+
 ## 1. Project Purpose & Architecture
 
 The North Eastern Region (NER) of India regularly experiences extreme weather, steep terrain, landslides, flash floods, and sudden road infrastructure failures. **AVIGHNA** shifts disaster logistics decision-making from **REACTIVE RESPONSE** to **EARLY DETECTION → RISK PREDICTION → SMART DECISION → ACTION** through a 4-stage pipeline:
