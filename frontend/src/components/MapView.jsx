@@ -230,28 +230,28 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
     return '#10b981';
   };
 
-  const [mapTheme, setMapTheme] = useState('google'); // 'google', 'hybrid', 'satellite', 'dark'
+  const [mapTheme, setMapTheme] = useState('osm'); // 'osm', 'satellite', 'dark', 'hybrid'
 
   const tileSources = {
-    google: {
-      url: 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-      attr: '&copy; Google Maps'
-    },
-    hybrid: {
-      url: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-      attr: '&copy; Google Maps Hybrid'
-    },
-    satellite: {
-      url: 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-      attr: '&copy; Google Maps Satellite'
+    osm: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      subdomains: ['a', 'b', 'c'],
+      attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     },
     dark: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
       subdomains: ['a', 'b', 'c'],
       attr: '&copy; Esri Dark Gray'
+    },
+    satellite: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      subdomains: ['a', 'b', 'c'],
+      attr: '&copy; Esri World Imagery Satellite'
+    },
+    hybrid: {
+      url: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attr: '&copy; Satellite Overlay'
     }
   };
 
@@ -283,10 +283,10 @@ export const MapView = ({ activeDistrict, roadsGeoJSON, incidents = [], vehicles
           {/* Map Layer Theme Buttons */}
           <div style={{ display: 'flex', background: '#0f172a', borderRadius: '6px', padding: '2px', border: '1px solid #334155' }}>
             <button
-              onClick={() => setMapTheme('google')}
-              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'google' ? '#2563eb' : 'transparent', color: mapTheme === 'google' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+              onClick={() => setMapTheme('osm')}
+              style={{ padding: '4px 8px', borderRadius: '4px', border: 'none', background: mapTheme === 'osm' ? '#2563eb' : 'transparent', color: mapTheme === 'osm' ? '#fff' : '#94a3b8', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
             >
-              🗺️ Google Maps
+              🗺️ OpenStreetMap
             </button>
             <button
               onClick={() => setMapTheme('hybrid')}
